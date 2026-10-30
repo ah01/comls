@@ -1,0 +1,135 @@
+# comls
+
+A small, read-only Windows CLI for listing COM ports and their device metadata.
+Written in C using Windows APIs, with no external runtime dependencies.
+
+## Usage
+
+```powershell
+.\build\comls.exe
+.\build\comls.exe --verbose
+.\build\comls.exe --version
+.\build\comls.exe --help
+```
+
+The default view shows the port, connection type, manufacturer, and description.
+Ports are sorted numerically (`COM2` before `COM10`).
+
+Illustrative output (not a scan of your computer):
+
+```text
+PORT  TYPE       MANUFACTURER                DESCRIPTION
+COM1  Native     Example manufacturer        Communications Port (COM1)
+COM7  Bluetooth  Example manufacturer        Bluetooth serial port (COM7)
+COM10 USB        Example manufacturer        USB Serial Port (COM10)
+```
+
+`--verbose` (`-v`) adds full manufacturer and description strings, device instance
+and hardware IDs, driver service/provider/version, location, parent instance, and
+USB VID/PID and interface number when available. The table limits the manufacturer
+column to 26 characters; verbose details preserve the full value. Missing metadata
+is shown as `Unknown`.
+
+`--help` (`-h`) and `--version` do not enumerate devices.
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Success, including no ports found |
+| `1` | Discovery or output error; details go to stderr |
+| `2` | Invalid arguments |
+
+Console output uses Unicode. Redirected output is UTF-8 without a BOM:
+
+```powershell
+.\build\comls.exe --verbose > ports.txt
+```
+
+Device identifiers may identify your hardware. Review and redact diagnostic output
+before posting it publicly.
+
+## Build and test
+
+Target: **Windows 10/11, x64**. Administrator rights are not required to run comls.
+
+Install **Visual Studio Build Tools** with the **Desktop development with C++**
+workload (MSVC x64/x86 compiler and Windows SDK), and **PowerShell 7**.
+No CMake or third-party libraries are used.
+
+From the repository root:
+
+```powershell
+pwsh -NoProfile -File .\build.ps1
+pwsh -NoProfile -File .\build.ps1 -Test
+```
+
+The script locates MSVC using `vswhere` and initializes its x64 environment.
+It works from a regular terminal; a Developer Command Prompt is not required.
+`build\comls.exe` is the standalone Release executable. Copy that file to a directory
+on your `PATH` to invoke it as `comls`. PowerShell and the compiler are build/test
+tools only, not application dependencies.
+
+The Release build optimizes for size, removes unused code, and statically links the
+C runtime (`/MT`), so the Visual C++ Redistributable is not required. The build prints
+the actual executable size; size and runtime vary with compiler and hardware.
+
+Reference measurement on Windows 11 x64 (build 26200), MSVC toolset 14.51.36231
+and Windows SDK 10.0.26100.0: **149,504 bytes (146 KiB)**. Ten consecutive scans of
+four present ports averaged **43 ms** (34-60 ms), including process startup and
+capturing stdout. These are local observations, not size or performance guarantees.
+
+`-Test` builds and runs C unit tests and PowerShell CLI smoke tests. Synthetic
+fixtures cover empty/error discovery and Unicode metadata without modifying or
+opening real devices. Unit tests cover port validation, sorting, merging, transport
+classification, USB identifier parsing, Unicode console output, exact UTF-8 bytes,
+and output errors. CLI smoke tests also enumerate local
+devices, but do not require a particular port or attached hardware.
+
+GitHub Actions runs the same build and tests on Windows for pushes and pull requests.
+Automatic releases and binary distribution are not configured.
+
+## Discovery and classification
+
+comls enumerates currently present COM device interfaces and the Ports/Modem device
+classes using SetupAPI, with the live `SERIALCOMM` registry map as a fallback for
+ports without standard PnP metadata. Configuration Manager supplies properties and
+device ancestry. The results are merged by COM name.
+
+| Type | Evidence |
+| --- | --- |
+| `Native` | The port itself is PCI-enumerated or a standard ACPI serial controller |
+| `USB` | A USB device appears in the port's ancestry |
+| `Bluetooth` | A Bluetooth serial device appears in the ancestry, even if its radio uses USB |
+| `Virtual` | A recognized software/virtual enumerator appears in the ancestry |
+| `Unknown` | Metadata does not establish one of these categories |
+
+Classification reflects driver metadata, not a physical inspection. For example,
+a PCI management-controller serial endpoint is `Native` even if it is not an
+external RS-232 connector. Arbitrary proprietary virtual ports cannot always be
+recognized. The manufacturer is the driver-reported value, not necessarily the
+manufacturer of the final product.
+
+For Bluetooth ports backed by a USB radio, verbose USB details describe that radio,
+not the remote Bluetooth device. The connection type remains `Bluetooth`.
+
+comls does not infer a USB serial number from the trailing instance ID, which can
+instead be a Windows-generated location identifier. USB instance IDs are available
+in verbose output, but are not labeled as serial numbers.
+
+Only present devices are listed, not disconnected historical devices. Enumeration
+does **not** open ports, change settings, test communication, or check whether another
+application has a port open. A listed port is not guaranteed to be free or working.
+Hot-plugging can change the result during a scan.
+
+Local hardware verification covered a PCI/AMT serial endpoint, Bluetooth serial
+ports backed by a USB radio, and a USB serial device. Proprietary virtual drivers
+were not exercised on real hardware; virtual/unknown cases have synthetic coverage.
+
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and
+[SECURITY.md](SECURITY.md) for security reporting. Repository source, comments,
+documentation, and other authored text are in English.
+
+## License
+
+[MIT](LICENSE).
