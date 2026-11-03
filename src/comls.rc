@@ -1,0 +1,4 @@
+#include "resource.h"
+
+IDR_USB_IDS RCDATA "build\\usb_ids.mszip"
+IDR_USB_IDS_NOTICE RCDATA "data\\usb.ids.LICENSE"

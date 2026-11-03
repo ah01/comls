@@ -18,6 +18,8 @@ typedef enum {
     PORT_DRIVER_VERSION,
     PORT_PARENT,
     PORT_USB_DEVICE,
+    PORT_USB_VENDOR,
+    PORT_USB_PRODUCT,
     PORT_FIELD_COUNT
 } PortField;
 

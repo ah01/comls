@@ -39,7 +39,28 @@ USB VID/PID and interface number when available. The table limits the manufactur
 column to 26 characters; verbose details preserve the full value. Missing metadata
 is shown as `Unknown`.
 
+For ports classified as `USB`, verbose details also include `USB vendor` and
+`USB product`, resolved from the embedded USB ID Repository snapshot using the
+displayed VID/PID. These are separate from the Windows-reported manufacturer
+and description, which are preserved. An unlisted ID is `Unknown`; a listed
+vendor is still shown when the product is unlisted. A missing or corrupt embedded
+database is an error (exit code `1`) when a verbose USB lookup is needed.
+The lookup never accesses the network or opens a device. The database is
+MSZIP-compressed in the executable and decompressed once before the first
+verbose USB lookup. Its memory is released after resolving the names; compact
+output, help/version, and scans without USB lookups do not decompress it.
+
 `--help` (`-h`) and `--version` do not enumerate devices.
+`--version` also shows the embedded database's upstream snapshot date:
+
+```text
+comls 0.1.0
+usb.ids 2026-06-26
+```
+
+The date comes from the source snapshot's `# Date:` header, not its Git commit
+or the build time. It is compiled into the executable without decompressing
+the database, so version output works without Git history or external files.
 
 | Exit code | Meaning |
 | --- | --- |
@@ -72,6 +93,11 @@ pwsh -NoProfile -File .\build.ps1 -Test
 ```
 
 The script locates MSVC using `vswhere` and initializes its x64 environment.
+It converts the committed `data\usb.ids` into an indexed binary, compresses it
+with MSZIP using the Windows Compression API, and uses the Windows SDK resource
+compiler (`rc.exe`) to embed it in the executable. The compression script uses
+PowerShell's built-in `Add-Type`; no extra tools or packages are needed.
+Normal builds do not download data and work offline.
 It works from a regular terminal; a Developer Command Prompt is not required.
 `build\comls.exe` is the standalone Release executable. Copy that file to a directory
 on your `PATH` to invoke it as `comls`. PowerShell and the compiler are build/test
@@ -81,16 +107,24 @@ The Release build optimizes for size, removes unused code, and statically links 
 C runtime (`/MT`), so the Visual C++ Redistributable is not required. The build prints
 the actual executable size; size and runtime vary with compiler and hardware.
 
-Reference measurement on Windows 11 x64 (build 26200), MSVC toolset 14.51.36231
-and Windows SDK 10.0.26100.0: **149,504 bytes (146 KiB)**. Ten consecutive scans of
-four present ports averaged **43 ms** (34-60 ms), including process startup and
-capturing stdout. These are local observations, not size or performance guarantees.
+A local build with the 2026.06.26 snapshot measured **441,344 bytes (431 KiB)**,
+compared with 906,752 bytes (about 886 KiB) with the uncompressed database.
+The 750,443-byte indexed database compresses to 285,180 bytes. A verbose USB
+lookup temporarily needs about 733 KiB for the decompressed data. Compression
+and decompression use the system `cabinet.dll`, available on the supported
+Windows versions; no additional DLL is distributed.
+These are local observations, not size or performance guarantees; the build
+prints the actual executable size.
 
 `-Test` builds and runs C unit tests and PowerShell CLI smoke tests. Synthetic
 fixtures cover empty/error discovery and Unicode metadata without modifying or
 opening real devices. Unit tests cover port validation, sorting, merging, transport
 classification, USB identifier parsing, Unicode console output, exact UTF-8 bytes,
-and output errors. CLI smoke tests also enumerate local
+and output errors. USB tests cover deterministic conversion, source validation,
+failed-update preservation, deterministic MSZIP compression, decompression size
+limits and cleanup, corrupt/truncated streams, binary validation, scoped vendor/product lookup,
+Unicode names, USB-only verbose enrichment, missing/corrupt resources, and
+standalone execution without external data files. CLI smoke tests also enumerate local
 devices, but do not require a particular port or attached hardware.
 
 GitHub Actions runs the same build and tests on Windows for pushes and pull requests.
@@ -118,7 +152,12 @@ recognized. The manufacturer is the driver-reported value, not necessarily the
 manufacturer of the final product.
 
 For Bluetooth ports backed by a USB radio, verbose USB details describe that radio,
-not the remote Bluetooth device. The connection type remains `Bluetooth`.
+not the remote Bluetooth device. The connection type remains `Bluetooth`, and
+database vendor/product names are not added for these ports.
+
+USB database names identify the registered VID/PID, not necessarily the final
+marketed device: they may describe a chipset, bridge, or generic product family.
+They do not change transport classification or verify device authenticity.
 
 comls does not infer a USB serial number from the trailing instance ID, which can
 instead be a Windows-generated location identifier. USB instance IDs are available
@@ -139,6 +178,44 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development and
 [SECURITY.md](SECURITY.md) for security reporting. Repository source, comments,
 documentation, and other authored text are in English.
 
+## Updating the USB database
+
+The complete upstream snapshot is committed as `data\usb.ids`. To update it:
+
+```powershell
+pwsh -NoProfile -File .\scripts\update-usb-ids.ps1
+pwsh -NoProfile -File .\build.ps1 -Test
+```
+
+The update script explicitly downloads https://usb-ids.gowdy.us/usb.ids over HTTPS
+with a timeout and no redirects. It validates vendor/product syntax, UTF-8 names,
+and unique IDs, plus a valid upstream date header, before replacing the old snapshot. A failed download or validation
+leaves the old file unchanged. Review and commit the resulting diff; rebuilding
+is required to update the names in an existing executable.
+
+The build-time converter is `scripts\convert-usb-ids.ps1`, followed by
+`scripts\compress-usb-ids.ps1`. The indexed `build\usb_ids.bin` is compressed to
+`build\usb_ids.mszip`, which is embedded as RCDATA; generated binaries and
+resources stay under ignored `build\`. The converter includes all vendors/products, ignoring
+USB interface names, classes, and the remaining non-device sections (which can
+contain legacy-encoded text). Runtime lookup uses sorted vendor/product indexes,
+binary search, and an uncompressed UTF-8 string pool. Format version 1 uses
+little-endian 32-bit integers: a 32-byte header (`CUSBIDS\0`, version, vendor count,
+product count, string-pool offset, string-pool size, reserved zero), 16-byte vendor
+records (VID, relative name offset, first product index, product count), 8-byte
+product records (PID, relative name offset), and NUL-terminated strings. Product
+ranges are contiguous and sorted within each sorted vendor. This indexed format
+is unchanged by compression: the resource uses the Windows Compression API's
+MSZIP buffer format, which carries the decompressed size. Both build-time
+compression and runtime decompression limit the indexed data to 64 MiB.
+After decompression, the indexed database is validated before any lookups;
+decompression failures use the same error path as other corrupt-resource errors.
+
 ## License
 
-[MIT](LICENSE).
+comls code is [MIT](LICENSE). The USB ID Repository database is distributed using
+its BSD-3-Clause option; see [the database attribution and license](data/usb.ids.LICENSE)
+and [upstream licensing](https://usb-ids.gowdy.us/). The snapshot's original header
+is retained, and the attribution/license notice is embedded as a separate RCDATA
+resource in the executable. Include `data\usb.ids.LICENSE` with any binary release
+as its third-party notice; the application needs only the executable to run.

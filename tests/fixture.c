@@ -16,6 +16,26 @@ int port_list_load(PortList *list)
         CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
         return 1;
     }
+    if (wcscmp(scenario, L"usb-unknown") == 0 ||
+        wcscmp(scenario, L"usb-vendor-only") == 0 ||
+        wcscmp(scenario, L"bluetooth-usb") == 0 ||
+        wcscmp(scenario, L"usb-no-ids") == 0) {
+        const wchar_t *identity =
+            wcscmp(scenario, L"usb-unknown") == 0 ? L"USB\\VID_0001&PID_6001\\TEST" :
+            wcscmp(scenario, L"usb-vendor-only") == 0 ? L"USB\\VID_5678&PID_6001\\TEST" :
+            L"USB\\VID_0403&PID_6001\\RADIO";
+        if (!port_set(&port, PORT_NAME, L"COM1") ||
+            !port_set(&port, PORT_MANUFACTURER, L"Windows manufacturer") ||
+            !port_set(&port, PORT_DESCRIPTION, L"Windows description") ||
+            (wcscmp(scenario, L"usb-no-ids") != 0 &&
+             !port_set(&port, PORT_USB_DEVICE, identity)))
+            goto failed;
+        port.transport = wcscmp(scenario, L"bluetooth-usb") == 0 ?
+            TRANSPORT_BLUETOOTH : TRANSPORT_USB;
+        if (!port_list_add(list, &port))
+            goto failed;
+        return 1;
+    }
     if (wcscmp(scenario, L"compact") == 0) {
         if (!port_set(&port, PORT_NAME, L"COM10") ||
             !port_set(&port, PORT_DESCRIPTION, L"Bluetooth serial port (COM10)"))
