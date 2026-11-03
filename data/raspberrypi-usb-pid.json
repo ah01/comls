@@ -1,0 +1,1268 @@
+{
+  "Repository": "raspberrypi/usb-pid",
+  "Path": "Readme.md",
+  "Commit": "550d9fc1a39859daa80321c4ec1341c1bdabb7de",
+  "Timestamp": "2026-10-16T15:42:34Z",
+  "Products": [
+    {
+      "Id": "0003",
+      "Name": "Raspberry Pi RP2040 boot"
+    },
+    {
+      "Id": "0004",
+      "Name": "Raspberry Pi PicoProbe"
+    },
+    {
+      "Id": "0005",
+      "Name": "Raspberry Pi Pico MicroPython firmware (CDC)"
+    },
+    {
+      "Id": "0009",
+      "Name": "Raspberry Pi Pico SDK CDC UART"
+    },
+    {
+      "Id": "000a",
+      "Name": "Raspberry Pi Pico SDK CDC UART (RP2040)"
+    },
+    {
+      "Id": "000b",
+      "Name": "Raspberry Pi Pico CircuitPython firmware"
+    },
+    {
+      "Id": "000c",
+      "Name": "Raspberry Pi Debug Probe"
+    },
+    {
+      "Id": "000d",
+      "Name": "Raspberry Pi USB3HUB ( USB2 hub part)"
+    },
+    {
+      "Id": "000e",
+      "Name": "Raspberry Pi USB3HUB ( USB3 hub part)"
+    },
+    {
+      "Id": "000f",
+      "Name": "Raspberry Pi RP2350 boot"
+    },
+    {
+      "Id": "0010",
+      "Name": "Raspberry Pi 500 QMK keyboard firmware"
+    },
+    {
+      "Id": "0011",
+      "Name": "Raspberry Pi 500+ QMK keyboard firmware"
+    },
+    {
+      "Id": "0013",
+      "Name": "Raspberry Pi USB Ethernet gadget"
+    },
+    {
+      "Id": "0030",
+      "Name": "Raspberry Pi USB 3.0 Flash Drive"
+    },
+    {
+      "Id": "1000",
+      "Name": "Cytron Maker Pi RP2040"
+    },
+    {
+      "Id": "1001",
+      "Name": "Picade 2040"
+    },
+    {
+      "Id": "1002",
+      "Name": "Pimoroni Pico Lipo (4MB)"
+    },
+    {
+      "Id": "1003",
+      "Name": "Pimoroni Pico Lipo (16MB)"
+    },
+    {
+      "Id": "1005",
+      "Name": "Melopero Shake RP2040"
+    },
+    {
+      "Id": "1006",
+      "Name": "Challenger 2040"
+    },
+    {
+      "Id": "1008",
+      "Name": "Pimoroni PGA2040"
+    },
+    {
+      "Id": "1009",
+      "Name": "Pimoroni Interstate 75"
+    },
+    {
+      "Id": "100a",
+      "Name": "Pimoroni Plasma 2040"
+    },
+    {
+      "Id": "100b",
+      "Name": "Challenger RP2040 LTE"
+    },
+    {
+      "Id": "100c",
+      "Name": "CNC Control Pendant"
+    },
+    {
+      "Id": "100d",
+      "Name": "Challenger NB RP2040 WiFi"
+    },
+    {
+      "Id": "100e",
+      "Name": "Raspberry Pi Zero"
+    },
+    {
+      "Id": "100f",
+      "Name": "Cytron Maker Nano RP2040"
+    },
+    {
+      "Id": "1010",
+      "Name": "RPICO32"
+    },
+    {
+      "Id": "1011",
+      "Name": "Melopero Cookie RP2040"
+    },
+    {
+      "Id": "1012",
+      "Name": "Raspberry Pi CM4 IO"
+    },
+    {
+      "Id": "1013",
+      "Name": "Raspberry Pi 4"
+    },
+    {
+      "Id": "1014",
+      "Name": "Raspberry Pi CM4"
+    },
+    {
+      "Id": "1015",
+      "Name": "Raspberry Pi Zero 2W"
+    },
+    {
+      "Id": "1016",
+      "Name": "Pimoroni Tiny 2040 (2MB)"
+    },
+    {
+      "Id": "1017",
+      "Name": "Pimoroni Automation 2040 W"
+    },
+    {
+      "Id": "1018",
+      "Name": "Pimoroni Inky Frame 5.7\""
+    },
+    {
+      "Id": "1019",
+      "Name": "Pimoroni Motor 2040"
+    },
+    {
+      "Id": "101a",
+      "Name": "Pimoroni Servo 2040"
+    },
+    {
+      "Id": "101b",
+      "Name": "Pimoroni Badger 2040"
+    },
+    {
+      "Id": "101e",
+      "Name": "Raspberry Pi Zero W"
+    },
+    {
+      "Id": "101f",
+      "Name": "RP2040-Zero"
+    },
+    {
+      "Id": "1020",
+      "Name": "RP2040-Plus"
+    },
+    {
+      "Id": "1021",
+      "Name": "RP2040-LCD-0.96"
+    },
+    {
+      "Id": "1023",
+      "Name": "Challenger RP2040 LoRa"
+    },
+    {
+      "Id": "1025",
+      "Name": "M?sli USB Pmod"
+    },
+    {
+      "Id": "1026",
+      "Name": "Pico:ed"
+    },
+    {
+      "Id": "1027",
+      "Name": "W5100S-EVB-Pico"
+    },
+    {
+      "Id": "1028",
+      "Name": "WizFi360-EVB-Pico"
+    },
+    {
+      "Id": "1029",
+      "Name": "W5500-EVB-Pico"
+    },
+    {
+      "Id": "102a",
+      "Name": "Lossless Adapter"
+    },
+    {
+      "Id": "102b",
+      "Name": "Slippi latency tester"
+    },
+    {
+      "Id": "102c",
+      "Name": "Challenger RP2040 WiFi/BLE"
+    },
+    {
+      "Id": "102d",
+      "Name": "Challenger RP2040 SD/RTC"
+    },
+    {
+      "Id": "102e",
+      "Name": "YD-RP2040"
+    },
+    {
+      "Id": "102f",
+      "Name": "B0XX"
+    },
+    {
+      "Id": "1030",
+      "Name": "RF-ID Reader"
+    },
+    {
+      "Id": "1031",
+      "Name": "RF-ID Reader"
+    },
+    {
+      "Id": "1032",
+      "Name": "Challenger RP2040 SubGHz"
+    },
+    {
+      "Id": "1035",
+      "Name": "LightWare Lidar"
+    },
+    {
+      "Id": "1037",
+      "Name": "Hunter Cat NFC"
+    },
+    {
+      "Id": "1038",
+      "Name": "nemi Link USB Receiver"
+    },
+    {
+      "Id": "1039",
+      "Name": "RP2040-LCD-1.28"
+    },
+    {
+      "Id": "103a",
+      "Name": "RP2040-One"
+    },
+    {
+      "Id": "103b",
+      "Name": "FAST Pinball Controller"
+    },
+    {
+      "Id": "103c",
+      "Name": "FAST Pinball Audio"
+    },
+    {
+      "Id": "103d",
+      "Name": "FAST Pinball Expansion"
+    },
+    {
+      "Id": "103e",
+      "Name": "FAST Pinball Display"
+    },
+    {
+      "Id": "103f",
+      "Name": "BomberCat"
+    },
+    {
+      "Id": "1040",
+      "Name": "Challenger RP2040 NFC"
+    },
+    {
+      "Id": "1041",
+      "Name": "IDM2040-7A"
+    },
+    {
+      "Id": "1042",
+      "Name": "TACT"
+    },
+    {
+      "Id": "1043",
+      "Name": "Archi"
+    },
+    {
+      "Id": "1044",
+      "Name": "Power Management HAT (B)"
+    },
+    {
+      "Id": "1045",
+      "Name": "Vms LX4e Laser Controller"
+    },
+    {
+      "Id": "1046",
+      "Name": "W6100-EVB-Pico"
+    },
+    {
+      "Id": "1048",
+      "Name": "nullbits Bit-C PRO RP2040"
+    },
+    {
+      "Id": "1049",
+      "Name": "ECUTamer MicroEMU"
+    },
+    {
+      "Id": "104a",
+      "Name": "Blok"
+    },
+    {
+      "Id": "104b",
+      "Name": "PicoADK"
+    },
+    {
+      "Id": "104c",
+      "Name": "COSMO-Pico"
+    },
+    {
+      "Id": "104d",
+      "Name": "MaxxStick R3"
+    },
+    {
+      "Id": "104e",
+      "Name": "CDC / HID device"
+    },
+    {
+      "Id": "104f",
+      "Name": "Pimoroni Badger 2040 W"
+    },
+    {
+      "Id": "1050",
+      "Name": "Pixelcade"
+    },
+    {
+      "Id": "1051",
+      "Name": "SOELPEC - Spectra XR"
+    },
+    {
+      "Id": "1052",
+      "Name": "Challenger RP2040 UWB"
+    },
+    {
+      "Id": "1053",
+      "Name": "DDC controller software"
+    },
+    {
+      "Id": "1054",
+      "Name": "SOELPEC - XR-5 Display"
+    },
+    {
+      "Id": "1055",
+      "Name": "RP2040-ETH"
+    },
+    {
+      "Id": "1056",
+      "Name": "RP2040-GEEK"
+    },
+    {
+      "Id": "1057",
+      "Name": "RP2040-Touch-LCD-1.28"
+    },
+    {
+      "Id": "1058",
+      "Name": "Pimoroni Plasma Stick 2040 W"
+    },
+    {
+      "Id": "1059",
+      "Name": "Pimoroni Pico DV Demo Base for Pico"
+    },
+    {
+      "Id": "105a",
+      "Name": "Pimoroni Pico DV Demo Base for Pico W"
+    },
+    {
+      "Id": "105b",
+      "Name": "Pimoroni Yukon"
+    },
+    {
+      "Id": "105d",
+      "Name": "DC31 5N4CK3Y 7R"
+    },
+    {
+      "Id": "105e",
+      "Name": "Raspberry Breadstick"
+    },
+    {
+      "Id": "105f",
+      "Name": "Challenger RP2040 WiFi6/BLE"
+    },
+    {
+      "Id": "1060",
+      "Name": "Liatris"
+    },
+    {
+      "Id": "1061",
+      "Name": "Pixel Pump"
+    },
+    {
+      "Id": "1063",
+      "Name": "Picopad / Picopad Wifi"
+    },
+    {
+      "Id": "1064",
+      "Name": "Jackal"
+    },
+    {
+      "Id": "1065",
+      "Name": "MICROpi"
+    },
+    {
+      "Id": "1067",
+      "Name": "Ardu2040M"
+    },
+    {
+      "Id": "1069",
+      "Name": "Matrix"
+    },
+    {
+      "Id": "106a",
+      "Name": "WisdPi Tiny RP2040"
+    },
+    {
+      "Id": "106b",
+      "Name": "XLAB CoreControl"
+    },
+    {
+      "Id": "106d",
+      "Name": "KATO EC-1"
+    },
+    {
+      "Id": "106e",
+      "Name": "MFC-DAQ01"
+    },
+    {
+      "Id": "106f",
+      "Name": "DudesCab"
+    },
+    {
+      "Id": "1071",
+      "Name": "Cytron Maker Uno RP2040"
+    },
+    {
+      "Id": "1072",
+      "Name": "Elite-Pi"
+    },
+    {
+      "Id": "1073",
+      "Name": "DCKids Badge"
+    },
+    {
+      "Id": "1074",
+      "Name": "Cytron EDU PICO"
+    },
+    {
+      "Id": "1075",
+      "Name": "PicoCTR"
+    },
+    {
+      "Id": "1076",
+      "Name": "Lift eye-P Mini"
+    },
+    {
+      "Id": "1077",
+      "Name": "IncrediDAQ 100"
+    },
+    {
+      "Id": "1078",
+      "Name": "Stella Mini"
+    },
+    {
+      "Id": "1079",
+      "Name": "VPinIO"
+    },
+    {
+      "Id": "107b",
+      "Name": "Connectivity RP2040 LTE/WIFI/BLE"
+    },
+    {
+      "Id": "107c",
+      "Name": "DeskHop"
+    },
+    {
+      "Id": "107d",
+      "Name": "Picomo"
+    },
+    {
+      "Id": "107e",
+      "Name": "Cytron EDU PICO 2"
+    },
+    {
+      "Id": "107f",
+      "Name": "Croco Gameboy Cartridge"
+    },
+    {
+      "Id": "1080",
+      "Name": "PiKVM Switch Multiport Extender"
+    },
+    {
+      "Id": "1081",
+      "Name": "Inky Frame 7.3\""
+    },
+    {
+      "Id": "1082",
+      "Name": "GPI Controller Mk. 1"
+    },
+    {
+      "Id": "1083",
+      "Name": "RP2040-PiZero"
+    },
+    {
+      "Id": "1084",
+      "Name": "RP2040-Tiny"
+    },
+    {
+      "Id": "1085",
+      "Name": "RP2040-Matrix"
+    },
+    {
+      "Id": "1086",
+      "Name": "RP2040-BLE"
+    },
+    {
+      "Id": "1087",
+      "Name": "PICO-Cam-A"
+    },
+    {
+      "Id": "1088",
+      "Name": "Redshift 6"
+    },
+    {
+      "Id": "1089",
+      "Name": "RP2040 Lauchpad"
+    },
+    {
+      "Id": "108a",
+      "Name": "SOELPEC - Spectra LT"
+    },
+    {
+      "Id": "108b",
+      "Name": "Late Mate"
+    },
+    {
+      "Id": "108d",
+      "Name": "ICD62 Board"
+    },
+    {
+      "Id": "108e",
+      "Name": "VI-CWBB"
+    },
+    {
+      "Id": "108f",
+      "Name": "AGC-4P"
+    },
+    {
+      "Id": "1090",
+      "Name": "Noise Nugget 2040"
+    },
+    {
+      "Id": "1091",
+      "Name": "IDM2040-43A"
+    },
+    {
+      "Id": "1092",
+      "Name": "Glyph"
+    },
+    {
+      "Id": "1093",
+      "Name": "Cytron IRIV IO Controller"
+    },
+    {
+      "Id": "1094",
+      "Name": "NOVA Evo"
+    },
+    {
+      "Id": "1096",
+      "Name": "Cytron MOTION 2350 Pro"
+    },
+    {
+      "Id": "1098",
+      "Name": "Picade Max Input"
+    },
+    {
+      "Id": "1099",
+      "Name": "Picade Max Audio"
+    },
+    {
+      "Id": "109c",
+      "Name": "Cytron SUMO:BIT"
+    },
+    {
+      "Id": "109d",
+      "Name": "VI-LAPTIMER"
+    },
+    {
+      "Id": "109e",
+      "Name": "W5100S-EVB-Pico2"
+    },
+    {
+      "Id": "109f",
+      "Name": "W5500-EVB-Pico2"
+    },
+    {
+      "Id": "10a0",
+      "Name": "W6100-EVB-Pico2"
+    },
+    {
+      "Id": "10a1",
+      "Name": "GRAM Slim Smash"
+    },
+    {
+      "Id": "10a2",
+      "Name": "Pimoroni Tiny FX"
+    },
+    {
+      "Id": "10a3",
+      "Name": "Pimoroni Pico Plus 2"
+    },
+    {
+      "Id": "10a4",
+      "Name": "Pimoroni Tiny 2350"
+    },
+    {
+      "Id": "10a5",
+      "Name": "Pimoroni Plasma 2350"
+    },
+    {
+      "Id": "10a6",
+      "Name": "Pimoroni PGA2350"
+    },
+    {
+      "Id": "10a8",
+      "Name": "snek board"
+    },
+    {
+      "Id": "10a9",
+      "Name": "CFHEADER"
+    },
+    {
+      "Id": "10aa",
+      "Name": "Macropad device"
+    },
+    {
+      "Id": "10ab",
+      "Name": "B5-DDU"
+    },
+    {
+      "Id": "10ac",
+      "Name": "B7-DDU"
+    },
+    {
+      "Id": "10ad",
+      "Name": "AcCellerator"
+    },
+    {
+      "Id": "10ae",
+      "Name": "PicoADK v2 (RP2350)"
+    },
+    {
+      "Id": "10b0",
+      "Name": "RP2350-Zero"
+    },
+    {
+      "Id": "10b1",
+      "Name": "RP2350-Plus"
+    },
+    {
+      "Id": "10b2",
+      "Name": "RP2350-Tiny"
+    },
+    {
+      "Id": "10b3",
+      "Name": "RP2350-LCD-1.28"
+    },
+    {
+      "Id": "10b4",
+      "Name": "RP2350-Touch-LCD-1.28"
+    },
+    {
+      "Id": "10b5",
+      "Name": "RP2350-One"
+    },
+    {
+      "Id": "10b6",
+      "Name": "RP2350-GEEK"
+    },
+    {
+      "Id": "10b7",
+      "Name": "RP2350-LCD-0.96"
+    },
+    {
+      "Id": "10b8",
+      "Name": "PROG-001-3300"
+    },
+    {
+      "Id": "10b9",
+      "Name": "PicoScratch MINT"
+    },
+    {
+      "Id": "10ba",
+      "Name": "SRGS"
+    },
+    {
+      "Id": "10bb",
+      "Name": "SRFCS"
+    },
+    {
+      "Id": "10bc",
+      "Name": "VI-296BB"
+    },
+    {
+      "Id": "10bd",
+      "Name": "Pimoroni Pico Plus 2 W"
+    },
+    {
+      "Id": "10be",
+      "Name": "Pimoroni Tiny FX W"
+    },
+    {
+      "Id": "10bf",
+      "Name": "Pimoroni Plasma 2350 W"
+    },
+    {
+      "Id": "10c0",
+      "Name": "Pimoroni Explorer"
+    },
+    {
+      "Id": "10c1",
+      "Name": "Workshop Computer"
+    },
+    {
+      "Id": "10c2",
+      "Name": "CND Engineering Porsche RSR"
+    },
+    {
+      "Id": "10c3",
+      "Name": "RP2350-ETH"
+    },
+    {
+      "Id": "10c4",
+      "Name": "Picomo V3"
+    },
+    {
+      "Id": "10c6",
+      "Name": "Hoja Gamepad"
+    },
+    {
+      "Id": "10c7",
+      "Name": "StitchPort"
+    },
+    {
+      "Id": "10c8",
+      "Name": "JackBoard"
+    },
+    {
+      "Id": "10c9",
+      "Name": "VI-LMDH"
+    },
+    {
+      "Id": "10ca",
+      "Name": "GP2040-CE Combat Unit Board P1"
+    },
+    {
+      "Id": "10cb",
+      "Name": "GP2040-CE Combat Unit Board P2"
+    },
+    {
+      "Id": "10cc",
+      "Name": "HaliKey MIDI"
+    },
+    {
+      "Id": "10cd",
+      "Name": "HaliKey Pro"
+    },
+    {
+      "Id": "10ce",
+      "Name": "ALETH42"
+    },
+    {
+      "Id": "10cf",
+      "Name": "Equus 296 GTX"
+    },
+    {
+      "Id": "10d0",
+      "Name": "Orpheus Pico"
+    },
+    {
+      "Id": "10d2",
+      "Name": "SPC Button Plate"
+    },
+    {
+      "Id": "10d4",
+      "Name": "W55RP20"
+    },
+    {
+      "Id": "10d5",
+      "Name": "Kastle 2"
+    },
+    {
+      "Id": "10d6",
+      "Name": "I4E Flight Sim Interface"
+    },
+    {
+      "Id": "10d8",
+      "Name": "Music Thing Radio Music"
+    },
+    {
+      "Id": "10d9",
+      "Name": "stac2"
+    },
+    {
+      "Id": "10da",
+      "Name": "AGC2P-Coleco"
+    },
+    {
+      "Id": "10db",
+      "Name": "P8W-DDU"
+    },
+    {
+      "Id": "10dc",
+      "Name": "VI-RSR"
+    },
+    {
+      "Id": "10dd",
+      "Name": "1. GC Ultimate"
+    },
+    {
+      "Id": "10df",
+      "Name": "ProGCC"
+    },
+    {
+      "Id": "10e0",
+      "Name": "FireBird"
+    },
+    {
+      "Id": "10e1",
+      "Name": "21R-P1X"
+    },
+    {
+      "Id": "10e2",
+      "Name": "KODAI - MF1"
+    },
+    {
+      "Id": "10e3",
+      "Name": "CROSSplate"
+    },
+    {
+      "Id": "10e4",
+      "Name": "OHIS Kiss Modules"
+    },
+    {
+      "Id": "10e5",
+      "Name": "PS4 FireBird"
+    },
+    {
+      "Id": "10e6",
+      "Name": "USB HSM"
+    },
+    {
+      "Id": "10e7",
+      "Name": "W6300-EVB-Pico"
+    },
+    {
+      "Id": "10e8",
+      "Name": "W6300-EVB-Pico2"
+    },
+    {
+      "Id": "10ea",
+      "Name": "Digital Pullforcegauge"
+    },
+    {
+      "Id": "10eb",
+      "Name": "SOELPEC - Terra LX"
+    },
+    {
+      "Id": "10ec",
+      "Name": "Soldered NULA Max RP2350"
+    },
+    {
+      "Id": "10ed",
+      "Name": "OpenOGMA Filter Wheel"
+    },
+    {
+      "Id": "10ee",
+      "Name": "Crea8"
+    },
+    {
+      "Id": "10ef",
+      "Name": "SOELPEC - XR-7 Display"
+    },
+    {
+      "Id": "10f0",
+      "Name": "Ant64-ICP"
+    },
+    {
+      "Id": "10f1",
+      "Name": "Ark I"
+    },
+    {
+      "Id": "10f2",
+      "Name": "FADEC"
+    },
+    {
+      "Id": "10f4",
+      "Name": "Canarin Fub"
+    },
+    {
+      "Id": "10f5",
+      "Name": "Kinoshita Lab's products"
+    },
+    {
+      "Id": "10f7",
+      "Name": "G1000 NXi"
+    },
+    {
+      "Id": "10f8",
+      "Name": "Svalboard Lightly"
+    },
+    {
+      "Id": "10f9",
+      "Name": "AM Dongle"
+    },
+    {
+      "Id": "10fc",
+      "Name": "Reachy Mini Eyes"
+    },
+    {
+      "Id": "10fd",
+      "Name": "pico-hsm"
+    },
+    {
+      "Id": "10fe",
+      "Name": "pico-fido"
+    },
+    {
+      "Id": "10ff",
+      "Name": "pico-openpgp"
+    },
+    {
+      "Id": "1100",
+      "Name": "Badger 2350 (Badgeware)"
+    },
+    {
+      "Id": "1101",
+      "Name": "Tufty 2350 (Badgeware)"
+    },
+    {
+      "Id": "1102",
+      "Name": "Blinky 2350 (Badgeware)"
+    },
+    {
+      "Id": "1103",
+      "Name": "axusbio"
+    },
+    {
+      "Id": "1104",
+      "Name": "SynConnect SmartCable"
+    },
+    {
+      "Id": "1105",
+      "Name": "5z6p's human interface devices"
+    },
+    {
+      "Id": "1106",
+      "Name": "VibeMic"
+    },
+    {
+      "Id": "1107",
+      "Name": "USB-TMC SCPI Interface (RP2040)"
+    },
+    {
+      "Id": "1108",
+      "Name": "Rotatrix Trackball"
+    },
+    {
+      "Id": "1109",
+      "Name": "Consofy"
+    },
+    {
+      "Id": "110b",
+      "Name": "DIOPTIC USB DEVICE"
+    },
+    {
+      "Id": "110c",
+      "Name": "KODAI - AM2"
+    },
+    {
+      "Id": "110d",
+      "Name": "Challenger+ RP2350 NB-IoT"
+    },
+    {
+      "Id": "110e",
+      "Name": "Translational Joystick"
+    },
+    {
+      "Id": "110f",
+      "Name": "DarrenMC System Infomation Display"
+    },
+    {
+      "Id": "1110",
+      "Name": "Conex audio"
+    },
+    {
+      "Id": "1111",
+      "Name": "GD Round DDU Display"
+    },
+    {
+      "Id": "1112",
+      "Name": "Midulate Mini"
+    },
+    {
+      "Id": "1113",
+      "Name": "Apodemus BatMic"
+    },
+    {
+      "Id": "1114",
+      "Name": "Apodemus BatRecorder"
+    },
+    {
+      "Id": "1115",
+      "Name": "DeltaTrack"
+    },
+    {
+      "Id": "1116",
+      "Name": "Xiaomao"
+    },
+    {
+      "Id": "1117",
+      "Name": "OpenTaxus"
+    },
+    {
+      "Id": "1119",
+      "Name": "KODAI - GZ"
+    },
+    {
+      "Id": "111a",
+      "Name": "Apodemus Griff"
+    },
+    {
+      "Id": "111c",
+      "Name": "Remote Bridge MiniKey"
+    },
+    {
+      "Id": "111d",
+      "Name": "Bat Detector 384"
+    },
+    {
+      "Id": "1120",
+      "Name": "TLM-110"
+    },
+    {
+      "Id": "1121",
+      "Name": "omni kbd"
+    },
+    {
+      "Id": "1123",
+      "Name": "Glyph Mini 2040"
+    },
+    {
+      "Id": "1124",
+      "Name": "DeskPressor"
+    },
+    {
+      "Id": "1125",
+      "Name": "Schwarzonator"
+    },
+    {
+      "Id": "1126",
+      "Name": "IQ-Series"
+    },
+    {
+      "Id": "1127",
+      "Name": "2Step"
+    },
+    {
+      "Id": "1128",
+      "Name": "Glyph 2040"
+    },
+    {
+      "Id": "112a",
+      "Name": "Alpha"
+    },
+    {
+      "Id": "112b",
+      "Name": "ProtoV MINI"
+    },
+    {
+      "Id": "112c",
+      "Name": "Crafted Unique Simracing Products"
+    },
+    {
+      "Id": "112d",
+      "Name": "Iconic Arcade"
+    },
+    {
+      "Id": "112f",
+      "Name": "Maker Sumo RP2350 Controller"
+    },
+    {
+      "Id": "1130",
+      "Name": "Marquee SAS Interface"
+    },
+    {
+      "Id": "1131",
+      "Name": "Marquee Cabinet Board"
+    },
+    {
+      "Id": "1132",
+      "Name": "Household Range"
+    },
+    {
+      "Id": "1133",
+      "Name": "OctGear"
+    },
+    {
+      "Id": "1134",
+      "Name": "CUBLOC2"
+    },
+    {
+      "Id": "1135",
+      "Name": "doppio"
+    },
+    {
+      "Id": "1136",
+      "Name": "Lightmix L1"
+    },
+    {
+      "Id": "1137",
+      "Name": "Pixel Pump 2"
+    },
+    {
+      "Id": "1138",
+      "Name": "ODAC-1"
+    },
+    {
+      "Id": "1139",
+      "Name": "AT1000"
+    },
+    {
+      "Id": "113a",
+      "Name": "magicKey63"
+    },
+    {
+      "Id": "113b",
+      "Name": "KeyNub USB-C License Dongle"
+    },
+    {
+      "Id": "113c",
+      "Name": "SidePulse"
+    },
+    {
+      "Id": "113d",
+      "Name": "Neo Trinity 1999 MIDI Expander"
+    },
+    {
+      "Id": "113f",
+      "Name": "TupanexOne"
+    },
+    {
+      "Id": "1141",
+      "Name": "Oculex Lock Controller"
+    },
+    {
+      "Id": "1144",
+      "Name": "RP2040 PC Fan & ARGB Controller"
+    },
+    {
+      "Id": "1145",
+      "Name": "Grid"
+    },
+    {
+      "Id": "1146",
+      "Name": "ETHERplate"
+    },
+    {
+      "Id": "1147",
+      "Name": "Flight Sim Panel"
+    },
+    {
+      "Id": "1148",
+      "Name": "FADE"
+    },
+    {
+      "Id": "1149",
+      "Name": "Q_ACK"
+    },
+    {
+      "Id": "114a",
+      "Name": "MASAO LAB Truck Wheel Controller"
+    },
+    {
+      "Id": "114b",
+      "Name": "KeyNub USB-C HSM"
+    },
+    {
+      "Id": "114d",
+      "Name": "Mini Sign"
+    },
+    {
+      "Id": "114e",
+      "Name": "WheelBridge Racing Adapter"
+    },
+    {
+      "Id": "1150",
+      "Name": "Vibz Wristband"
+    },
+    {
+      "Id": "1151",
+      "Name": "Rao"
+    },
+    {
+      "Id": "1152",
+      "Name": "BRIDGEplate2"
+    },
+    {
+      "Id": "1154",
+      "Name": "G3"
+    },
+    {
+      "Id": "1155",
+      "Name": "VI-LMP2"
+    },
+    {
+      "Id": "1157",
+      "Name": "Night Owl m1"
+    },
+    {
+      "Id": "1158",
+      "Name": "MODplate"
+    },
+    {
+      "Id": "115b",
+      "Name": "Si473x Radio Ver6"
+    },
+    {
+      "Id": "115c",
+      "Name": "Breakout Board V3"
+    },
+    {
+      "Id": "115d",
+      "Name": "Pinquisitor"
+    },
+    {
+      "Id": "115f",
+      "Name": "Equinox"
+    },
+    {
+      "Id": "1160",
+      "Name": "S/PDIF USB Capture"
+    },
+    {
+      "Id": "1163",
+      "Name": "GR-SYNC2"
+    }
+  ]
+}

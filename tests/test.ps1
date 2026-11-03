@@ -59,9 +59,14 @@ $snapshot = [System.IO.File]::ReadAllText((Join-Path $root 'data\usb.ids'),
 $dateMatch = [regex]::Match($snapshot, '(?m)^# Date:\s*(\d{4}-\d{2}-\d{2}) ')
 Assert-True $dateMatch.Success 'Upstream USB snapshot date was not found.'
 $usbDate = $dateMatch.Groups[1].Value
+. (Join-Path $root 'scripts\raspberrypi-usb-pid.ps1')
+$raspberryPi = Read-RaspberryPiSnapshot (Join-Path $root 'data\raspberrypi-usb-pid.json')
+$versionOutput = "comls $version`n`nUSB vendor and product ID sources:`n" +
+    "  usb.ids: $usbDate`n" +
+    "  raspberrypi/usb-pid: $($raspberryPi.Date) ($($raspberryPi.Commit))`n"
 foreach ($binary in @($exe, $fixture, $noIds, $badIds)) {
     $result = Invoke-Cli $binary @('--version')
-    Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq "comls $version`nusb.ids $usbDate`n" -and
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq $versionOutput -and
         $result.Stderr -eq '') 'Version output or exit code is incorrect.'
     foreach ($flag in @('--help', '-h')) {
         $result = Invoke-Cli $binary @($flag)
@@ -186,6 +191,9 @@ $copiedExe = Join-Path $standalone 'comls.exe'
 Copy-Item -LiteralPath $exe -Destination $copiedExe -Force
 Push-Location $standalone
 try {
+    $result = Invoke-Cli $copiedExe @('--version')
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq $versionOutput -and
+        $result.Stderr -eq '') 'Standalone version output requires external files.'
     $result = Invoke-Cli $copiedExe @('--verbose')
     Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '') `
         'Standalone copied executable failed without external database files.'

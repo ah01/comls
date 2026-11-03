@@ -67,14 +67,38 @@ Assert-True ((Get-UsbIdsDate $inputPath) -ceq '2025-02-28') `
 
 $convert = Join-Path $PSScriptRoot '..\scripts\convert-usb-ids.ps1'
 $metadata = Join-Path $work 'metadata.h'
-& $convert -InputPath $inputPath -OutputPath $second -MetadataPath $metadata
+$raspberryPiPath = Join-Path $work 'raspberrypi.json'
+$raspberryPiJson = @'
+{
+  "Repository": "raspberrypi/usb-pid",
+  "Path": "Readme.md",
+  "Commit": "0123456789012345678901234567890123456789",
+  "Timestamp": "2025-01-02T03:04:05Z",
+  "Products": [{"Id": "1234", "Name": "Supplemental product"}]
+}
+'@
+[System.IO.File]::WriteAllText($raspberryPiPath, $raspberryPiJson, $utf8)
+$piMetadata = "#define COMLS_RASPBERRY_PI_DATE L`"2025-01-02`"`n" +
+    "#define COMLS_RASPBERRY_PI_COMMIT L`"0123456789012345678901234567890123456789`"`n"
+& $convert -InputPath $inputPath -OutputPath $second -MetadataPath $metadata -RaspberryPiPath $raspberryPiPath
 Assert-True ([System.IO.File]::ReadAllText($metadata) -ceq
-    "#define COMLS_USB_IDS_DATE L`"2025-02-28`"`n") 'Generated snapshot metadata is incorrect.'
+    ("#define COMLS_USB_IDS_DATE L`"2025-02-28`"`n" + $piMetadata)) 'Generated snapshot metadata is incorrect.'
 [System.IO.File]::WriteAllText($inputPath,
     ($source.Replace('2025-02-28', '2026-03-01')), $utf8)
-& $convert -InputPath $inputPath -OutputPath $second -MetadataPath $metadata
+& $convert -InputPath $inputPath -OutputPath $second -MetadataPath $metadata -RaspberryPiPath $raspberryPiPath
 Assert-True ([System.IO.File]::ReadAllText($metadata) -ceq
-    "#define COMLS_USB_IDS_DATE L`"2026-03-01`"`n") 'Updated snapshot metadata was not regenerated.'
+    ("#define COMLS_USB_IDS_DATE L`"2026-03-01`"`n" + $piMetadata)) 'Updated snapshot metadata was not regenerated.'
+[System.IO.File]::WriteAllText($raspberryPiPath,
+    $raspberryPiJson.Replace('2025-01-02T03:04:05Z', '2026-04-05T06:07:08Z').
+        Replace('0123456789012345678901234567890123456789', 'abcdef0123456789012345678901234567890123'),
+    $utf8)
+& $convert -InputPath $inputPath -OutputPath $second -MetadataPath $metadata -RaspberryPiPath $raspberryPiPath
+Assert-True ([System.IO.File]::ReadAllText($metadata) -ceq
+    ("#define COMLS_USB_IDS_DATE L`"2026-03-01`"`n" +
+     "#define COMLS_RASPBERRY_PI_DATE L`"2026-04-05`"`n" +
+     "#define COMLS_RASPBERRY_PI_COMMIT L`"abcdef0123456789012345678901234567890123`"`n")) `
+    'Updated Raspberry Pi metadata was not regenerated.'
+Write-UsbIdsBinary (Read-UsbIds $inputPath) $second
 
 $compress = Join-Path $PSScriptRoot '..\scripts\compress-usb-ids.ps1'
 $packed = Join-Path $build 'test_usb_ids.mszip'

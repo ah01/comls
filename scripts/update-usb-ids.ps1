@@ -3,6 +3,9 @@
 param()
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'usb-ids.ps1')
+. (Join-Path $PSScriptRoot 'raspberrypi-usb-pid.ps1')
 $path = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\data\usb.ids'))
-Update-UsbIds $path
-Write-Host 'Updated data\usb.ids. Review and commit the snapshot, then rebuild.'
+$raspberryPiPath = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot '..\data\raspberrypi-usb-pid.json'))
+Update-UsbDatabases $path $raspberryPiPath
+Write-Host 'Updated both USB database snapshots. Review and commit the snapshots, then rebuild.'
