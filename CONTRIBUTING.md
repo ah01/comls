@@ -13,6 +13,14 @@ regardless of the language used in development conversations.
 Keep compiler warnings clean and preserve the existing MIT license. Avoid adding
 runtime dependencies or opening COM ports as part of discovery.
 
+Git is also required for the release tests invoked by `build.ps1 -Test`. These
+tests create disposable repositories under `build\` and mock GitHub publication;
+they do not publish tags or releases. Keep the default source version in
+`COMLS_VERSION` in `src\ports.h`. CI derives X/Y from that definition and injects
+the calculated mainline patch version at build time without committing generated
+files. See [Releases and versioning](README.md#releases-and-versioning) for baseline
+tags, versioned local builds, and manually promoting an Alpha to stable.
+
 For bug reports, include the Windows version, `comls --version`, the command used,
 and expected versus actual behavior. A redacted `--verbose` excerpt can help with
 driver-specific issues; remove device serial numbers and identifying instance IDs

@@ -3,6 +3,27 @@
 A small, read-only Windows CLI for listing COM ports and their device metadata.
 Written in C using Windows APIs, with no external runtime dependencies.
 
+## Download
+
+Download `comls.exe` and the license notices from
+[GitHub Releases](https://github.com/ah01/comls/releases). The executable is
+standalone; no installer or Visual C++ Redistributable is required.
+**Alpha** releases are automatic snapshots, marked as GitHub prereleases.
+Stable releases are explicitly promoted from an existing Alpha without rebuilding;
+the executable and checksums remain identical. Until a stable release is promoted,
+only prereleases are available.
+
+Each release includes `LICENSE`, `usb.ids.LICENSE`, `raspberrypi-usb-pid.LICENSE`,
+and `SHA256SUMS.txt`. To check the executable after downloading:
+
+```powershell
+Get-FileHash .\comls.exe -Algorithm SHA256
+```
+
+Compare the result with the `comls.exe` entry in `SHA256SUMS.txt`.
+Checksums detect corrupted downloads, not an untrusted release source. Builds are
+not code-signed, so Windows SmartScreen may warn about an unfamiliar executable.
+
 ## Usage
 
 ```powershell
@@ -140,7 +161,86 @@ merging, and paired-update failure preservation. CLI smoke tests also enumerate 
 devices, but do not require a particular port or attached hardware.
 
 GitHub Actions runs the same build and tests on Windows for pushes and pull requests.
-Automatic releases and binary distribution are not configured.
+Tests also require Git to exercise release versioning in temporary local repositories;
+they never create real releases or write to GitHub.
+
+## Releases and versioning
+
+The existing **CI** workflow builds and tests every push and pull request. A successful
+push to `main` additionally tags the exact tested commit and publishes an Alpha
+prerelease. Other branches and pull requests cannot publish. Release mutations are
+serialized, with up to 100 pending jobs queued rather than replaced by newer pushes;
+tags created with the workflow token do not trigger another CI run.
+
+Tags use `vX.Y.Z` (Git does not allow spaces in tag names). `--version` reports
+`X.Y.Z`; Alpha/stable is a GitHub release status, not a suffix in the binary.
+The version is calculated as follows:
+
+- `X.Y` comes from `COMLS_VERSION` in `src\ports.h`; its source patch component
+  remains the default for ordinary local builds.
+- Without a `vX.Y.0` baseline tag, `Z` is the number of commits in the target
+  commit's first-parent history, including the root.
+- With that baseline, `Z` is the number of first-parent commits **after** it.
+  The baseline itself has `Z = 0`. A baseline off the target's first-parent
+  history is an error.
+
+For example, without a baseline, the fifth mainline commit with source version
+`0.1.0` becomes `v0.1.5`. If `v0.2.0` marks the first commit in a new series,
+the next mainline commit becomes `v0.2.1`. A PR merge counts once, regardless of
+the number of commits in the merged branch. Rebase/fast-forward merges can add
+multiple mainline commits. Failed or skipped workflow runs can leave version gaps.
+
+Change X/Y in source when starting a new series. To reset its counter, explicitly
+create a baseline tag **before that series has published releases**, on the intended
+mainline commit (replace the example SHA):
+
+```powershell
+git tag v0.2.0 <full-commit-sha>
+git push origin v0.2.0
+```
+
+A tag push alone does not publish a release; the next push to `main` does.
+Changing X/Y without creating a baseline continues counting from the start of
+history. Do not move version tags, rewrite main's published history, or add a
+baseline retroactively to a series with releases; doing so changes the numbering.
+Keep published main history append-only and protect it with required CI checks.
+
+For a versioned local build, without changing tracked source:
+
+```powershell
+pwsh -NoProfile -File .\build.ps1 -Test -Version 0.1.42
+```
+
+Running the normal build again restores the source version. Generated version
+headers stay under ignored `build\`; ordinary builds do not need Git history.
+
+### Promoting an Alpha to stable
+
+In **Actions > CI > Run workflow**, select branch **main** and enter an existing
+Alpha tag, such as `v0.1.42`. The workflow verifies its mainline commit, version,
+assets, checksums, and executable version, then clears the prerelease flag,
+updates the release title/notes, and marks it **Latest**. It does not rebuild,
+retag, or replace files. The selected Alpha can be older than the current main.
+Repeating promotion of an already stable release leaves it unchanged.
+
+The workflow uses only the built-in `GITHUB_TOKEN`, with `contents: write` limited
+to publishing/promotion jobs. Repository or organization policies must allow that
+permission and creation of `v*` tags. No personal access token or other secret is
+needed. Branch protection and tag rules must not prevent the workflow from creating
+new version tags; existing tags are never moved.
+
+Assets are uploaded and verified in a draft before publication. To recover a
+transient upload failure, rerun **failed jobs**, reusing the tested executable
+artifact (retained for seven days). Existing matching draft files are reused;
+conflicting files fail explicitly and are never overwritten. An identical
+publication rerun preserves an already published release, including a stable
+release's status. Rebuilding the whole workflow may produce different bytes
+because compiler output is not guaranteed reproducible; an asset conflict then
+requires investigation rather than automatic replacement. An expired artifact
+also requires investigation; the publisher does not silently rebuild it.
+
+All releases are retained. The release scripts use PowerShell and GitHub CLI;
+there is no separate release framework, installer, or runtime dependency.
 
 ## Discovery and classification
 

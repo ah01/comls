@@ -1,6 +1,10 @@
 #requires -Version 7.0
 [CmdletBinding()]
-param([switch]$Test)
+param(
+    [switch]$Test,
+    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')]
+    [string]$Version
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -21,14 +25,19 @@ if (-not (Test-Path -LiteralPath $vcvars)) {
 
 $build = Join-Path $PSScriptRoot 'build'
 New-Item -ItemType Directory -Path $build -Force | Out-Null
+$versionHeader = if ($Version) { "#define COMLS_VERSION L`"$Version`"`n" } else { '' }
+[System.IO.File]::WriteAllText((Join-Path $build 'comls_version.h'), $versionHeader,
+    [System.Text.Encoding]::ASCII)
 & (Join-Path $PSScriptRoot 'scripts\convert-usb-ids.ps1')
 & (Join-Path $PSScriptRoot 'scripts\compress-usb-ids.ps1') `
     -InputPath (Join-Path $build 'usb_ids.bin') -OutputPath (Join-Path $build 'usb_ids.mszip')
 if ($Test) {
+    & (Join-Path $PSScriptRoot 'tests\test_release_version.ps1')
+    & (Join-Path $PSScriptRoot 'tests\test_release.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_raspberrypi_usb_pid.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_usb_ids.ps1')
 }
-$flags = '/nologo /std:c17 /W4 /WX /utf-8 /O1 /GL /Gy /Gw /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /Isrc /Ibuild'
+$flags = '/nologo /std:c17 /W4 /WX /utf-8 /O1 /GL /Gy /Gw /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /Isrc /Ibuild /FIcomls_version.h'
 $link = '/link /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO /DYNAMICBASE /NXCOMPAT'
 $libraries = 'setupapi.lib cfgmgr32.lib advapi32.lib cabinet.lib'
 $commands = @(
@@ -65,5 +74,7 @@ if ($Test) {
     if ($LASTEXITCODE -ne 0) {
         throw "test_usb_ids.exe failed (exit code $LASTEXITCODE)."
     }
-    & (Join-Path $PSScriptRoot 'tests\test.ps1')
+    $testArguments = @{}
+    if ($Version) { $testArguments.ExpectedVersion = $Version }
+    & (Join-Path $PSScriptRoot 'tests\test.ps1') @testArguments
 }
