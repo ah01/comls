@@ -30,9 +30,9 @@ function Get-Release {
     param([string]$Repository, [string]$Tag)
     $pages = (Invoke-ReleaseGh @('api', '--paginate', '--slurp',
         "repos/$Repository/releases?per_page=100")) -join "`n" | ConvertFrom-Json
-    $matches = @($pages | ForEach-Object { $_ } | Where-Object { $_.tag_name -ceq $Tag })
-    if ($matches.Count -gt 1) { throw "Multiple releases found for $Tag." }
-    if ($matches.Count -eq 1) { return $matches[0] }
+    $found = @($pages | ForEach-Object { $_ } | Where-Object { $_.tag_name -ceq $Tag })
+    if ($found.Count -gt 1) { throw "Multiple releases found for $Tag." }
+    if ($found.Count -eq 1) { return $found[0] }
     return $null
 }
 
@@ -130,7 +130,10 @@ Download comls.exe and the license notices. SHA256SUMS.txt contains SHA-256 chec
             Invoke-ReleaseGh @('release', 'create', $tag, '--repo', $Repository, '--verify-tag',
                 '--draft', '--prerelease', '--title', "comls $($version.Version) Alpha", '--notes', $notes) |
                 Out-Null
-            $release = Get-Release $Repository $tag
+            for ($attempt = 0; $attempt -lt 10 -and -not $release; $attempt++) {
+                if ($attempt -gt 0) { Start-Sleep -Seconds 3 }
+                $release = Get-Release $Repository $tag
+            }
             if (-not $release) { throw "New draft $tag was not found." }
         }
         $existing = @($release.assets | ForEach-Object { $_.name })
