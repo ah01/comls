@@ -70,14 +70,51 @@ int output_text(HANDLE stream, const wchar_t *text)
     }
 }
 
-int output_format(HANDLE stream, const wchar_t *format, ...)
+static int output_color_text(HANDLE stream, OutputColor color, const wchar_t *text)
 {
-    va_list args;
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    DWORD mode, error;
+    WORD foreground, attributes;
+    int result;
+    if (color == OUTPUT_DEFAULT || !GetConsoleMode(stream, &mode))
+        return output_text(stream, text);
+    if (!GetConsoleScreenBufferInfo(stream, &info))
+        return 0;
+    switch (color) {
+    case OUTPUT_BLUE:
+        foreground = FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        break;
+    case OUTPUT_YELLOW:
+        foreground = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+        break;
+    case OUTPUT_GRAY:
+        foreground = FOREGROUND_INTENSITY;
+        break;
+    default:
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return 0;
+    }
+    attributes = (WORD)((info.wAttributes & ~(FOREGROUND_RED | FOREGROUND_GREEN |
+                        FOREGROUND_BLUE | FOREGROUND_INTENSITY)) | foreground);
+    if (!SetConsoleTextAttribute(stream, attributes))
+        return 0;
+    result = output_text(stream, text);
+    error = GetLastError();
+    if (!SetConsoleTextAttribute(stream, info.wAttributes) && result)
+        return 0;
+    SetLastError(error);
+    return result;
+}
+
+static int output_vformat(HANDLE stream, OutputColor color,
+                          const wchar_t *format, va_list args)
+{
+    va_list measure;
     int length, result;
     wchar_t *text;
-    va_start(args, format);
-    length = _vscwprintf(format, args);
-    va_end(args);
+    va_copy(measure, args);
+    length = _vscwprintf(format, measure);
+    va_end(measure);
     if (length < 0) {
         SetLastError(ERROR_INVALID_DATA);
         return 0;
@@ -87,20 +124,38 @@ int output_format(HANDLE stream, const wchar_t *format, ...)
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);
         return 0;
     }
-    va_start(args, format);
     result = vswprintf_s(text, (size_t)length + 1, format, args);
-    va_end(args);
     if (result < 0) {
         free(text);
         SetLastError(ERROR_INVALID_DATA);
         return 0;
     }
-    result = output_text(stream, text);
+    result = output_color_text(stream, color, text);
     {
         DWORD error = GetLastError();
         free(text);
         SetLastError(error);
     }
+    return result;
+}
+
+int output_format(HANDLE stream, const wchar_t *format, ...)
+{
+    va_list args;
+    int result;
+    va_start(args, format);
+    result = output_vformat(stream, OUTPUT_DEFAULT, format, args);
+    va_end(args);
+    return result;
+}
+
+int output_color_format(HANDLE stream, OutputColor color, const wchar_t *format, ...)
+{
+    va_list args;
+    int result;
+    va_start(args, format);
+    result = output_vformat(stream, color, format, args);
+    va_end(args);
     return result;
 }
 

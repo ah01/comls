@@ -16,6 +16,46 @@ int port_list_load(PortList *list)
         CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
         return 1;
     }
+    if (wcscmp(scenario, L"compact-details") == 0) {
+        static const struct {
+            const wchar_t *manufacturer;
+            const wchar_t *vendor;
+            const wchar_t *product;
+            Transport transport;
+        } cases[] = {
+            { L"Maker", L"Vendor", L"Product", TRANSPORT_USB },
+            { L"Microsoft", L"Vendor", L"Product", TRANSPORT_USB },
+            { L"mIcRoSoFt", NULL, NULL, TRANSPORT_NATIVE },
+            { NULL, L"Vendor", NULL, TRANSPORT_USB },
+            { L"", NULL, L"Product", TRANSPORT_USB },
+            { L"Maker", L"Unknown", L"Unknown", TRANSPORT_USB },
+            { L"Unknown", L"Unknown", L"Unknown", TRANSPORT_USB },
+            { L"Microsoft", L"Unknown", L"Unknown", TRANSPORT_USB },
+            { L"Microsoft Corporation", NULL, NULL, TRANSPORT_NATIVE },
+            { L"Microsoft", L"Vendor", L"Product", TRANSPORT_BLUETOOTH },
+            { L"Maker", L"Vendor", L"Unknown", TRANSPORT_USB },
+            { L"Maker", L"Unknown", L"Product", TRANSPORT_USB }
+        };
+        size_t i;
+        for (i = 0; i < ARRAYSIZE(cases); ++i) {
+            wchar_t name[16];
+            if (swprintf_s(name, ARRAYSIZE(name), L"COM%zu", i + 1) < 0 ||
+                !port_set(&port, PORT_NAME, name) ||
+                !port_set(&port, PORT_DESCRIPTION, L"Serial") ||
+                (cases[i].manufacturer &&
+                 !port_set(&port, PORT_MANUFACTURER, cases[i].manufacturer)) ||
+                (cases[i].vendor &&
+                 !port_set(&port, PORT_USB_VENDOR, cases[i].vendor)) ||
+                (cases[i].product &&
+                 !port_set(&port, PORT_USB_PRODUCT, cases[i].product)))
+                goto failed;
+            port.transport = cases[i].transport;
+            if (!port_list_add(list, &port))
+                goto failed;
+        }
+        port_list_sort(list);
+        return 1;
+    }
     if (wcscmp(scenario, L"usb-unknown") == 0 ||
         wcscmp(scenario, L"usb-vendor-only") == 0 ||
         wcscmp(scenario, L"bluetooth-usb") == 0 ||
@@ -103,6 +143,12 @@ int port_list_load(PortList *list)
     if (!port_set(&port, PORT_NAME, L"COM10") ||
         !port_set(&port, PORT_DESCRIPTION, L"USB serial \u017dlu\u0165ou\u010dk\u00fd \u65e5\u672c \U0001f600 (COM10)") ||
         !port_set(&port, PORT_MANUFACTURER, L"Example manufacturer with a long full name") ||
+        !port_set(&port, PORT_HARDWARE, L"USB\\VID_0403&PID_6001&REV_0600") ||
+        !port_set(&port, PORT_LOCATION, L"Port_#0001.Hub_#0002") ||
+        !port_set(&port, PORT_DRIVER_PROVIDER, L"Example driver provider") ||
+        !port_set(&port, PORT_DRIVER_VERSION, L"2.12.36.4") ||
+        !port_set(&port, PORT_SERVICE, L"FTSER2K") ||
+        !port_set(&port, PORT_PARENT, L"USB\\VID_0403&PID_6001\\PARENT") ||
         !port_set(&port, PORT_USB_DEVICE, L"USB\\VID_0403&PID_6001&MI_02\\EXAMPLE") ||
         !port_set(&port, PORT_INSTANCE, L"USB\\VID_0403&PID_6001&MI_02\\EXAMPLE"))
         goto failed;

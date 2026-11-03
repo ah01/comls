@@ -14,6 +14,6 @@ Keep compiler warnings clean and preserve the existing MIT license. Avoid adding
 runtime dependencies or opening COM ports as part of discovery.
 
 For bug reports, include the Windows version, `comls --version`, the command used,
-and expected versus actual behavior. A redacted `--verbose` excerpt can help with
+and expected versus actual behavior. A redacted `-vv` excerpt can help with
 driver-specific issues; remove device serial numbers and identifying instance IDs
 before sharing it. Use [SECURITY.md](SECURITY.md) for security issues.
