@@ -8,9 +8,19 @@ Written in C using Windows APIs, with no external runtime dependencies.
 ```powershell
 .\build\comls.exe
 .\build\comls.exe --verbose
+.\build\comls.exe -d
+.\build\comls.exe -vv
+.\build\comls.exe --usb-only
+.\build\comls.exe -u -v
 .\build\comls.exe --version
 .\build\comls.exe --help
 ```
+
+`--usb-only` (`-u`) lists only ports classified as `USB` and can be combined with
+either detail level (`-v`, `-d`, or `-vv`). The summary counts only the selected ports. Bluetooth ports
+backed by a USB radio are excluded, as are native, virtual, and unknown ports.
+When no USB ports match, the usual empty-list output is shown and the exit code
+is `0`. Help and version output do not enumerate devices even with this option.
 
 The default view shows aligned port names, connection types in parentheses, and
 descriptions, without a table header. Optional details follow the description as
@@ -22,12 +32,21 @@ if no details remain, the square brackets are omitted. Values are not truncated.
 A missing description is still shown as `Unknown`. Bluetooth is abbreviated
 as `BL`; other connection types retain their names. Ports are sorted numerically
 (`COM2` before `COM10`).
-The list starts with the total number of present ports and a breakdown by connection
+All output levels start with the total number of present ports and a breakdown by connection
 type, followed by a blank line. Types with no ports are omitted; an empty list shows
 `Found 0 ports:` followed by a blank line.
 If a description ends with the same port name in parentheses, that redundant suffix
 and its surrounding whitespace are omitted from the default view. Verbose output
 preserves the original description.
+
+When standard output is a Windows console (including Windows Terminal), the
+default view colors `(BL)` blue, `(USB)` yellow, and the trailing square-bracketed
+details gray. Both verbose levels use the same type colors in their detail
+blocks, with detail labels in gray. Other text
+retains the terminal's original colors.
+Console support is detected automatically using Windows console APIs;
+the background and original text attributes are preserved. Redirected output
+and pipes stay plain UTF-8, with no color escape sequences.
 
 Illustrative output (not a scan of your computer):
 
@@ -38,21 +57,33 @@ COM1   (USB) USB Serial Port [FTDI, USB: Future Technology Devices International
 COM10  (BL)  Bluetooth serial port
 ```
 
-`--verbose` (`-v`) retains the table with port, full connection type name,
-manufacturer, and description, and adds full manufacturer and description strings, device instance
-and hardware IDs, driver service/provider/version, location, parent instance, and
-USB VID/PID and interface number when available. The table limits the manufacturer
-column to 26 characters; verbose details preserve the full value. Missing metadata
-is shown as `Unknown`.
+`--verbose` (`-v`, with `-d` as an alias for details) shows only a detail block
+for each port after the shared `Found ...` summary, headed by its COM name, with
+a blank line between ports and no summary table. Detail blocks include
+the type, full description and manufacturer, and USB vendor/product names
+and interface number when available. Numeric USB VID/PID are omitted when both
+vendor and product names are known; if either name is unknown, the IDs remain visible.
 
-For ports classified as `USB`, both views include the vendor and product names.
+`-vv` shows the complete diagnostic output, additionally including `Instance ID`,
+`Hardware IDs`, `Driver version`, `Location`, `USB instance`, `Driver provider`,
+`Service`, and `Parent instance`. Numeric USB VID/PID are always included when
+available, even when both names are known.
+Repeating detail flags (for example, `-v -v` or `--verbose --verbose`) also selects
+the full level; further repetitions stay at that level.
+Both levels use the same colors and support `--usb-only`.
+
+Both detail levels preserve full manufacturer and description values. Missing metadata
+is shown as `Unknown`. Every detail label ends with a colon, with values aligned
+in a shared column (for example, `Type:`, `Description:`, and `USB VID:PID:`).
+
+For ports classified as `USB`, all output levels include the vendor and product names.
 Verbose details label these as `USB vendor` and
 `USB product`, resolved from the embedded USB ID Repository snapshot using the
-displayed VID/PID. These are separate from the Windows-reported manufacturer
+device VID/PID. These are separate from the Windows-reported manufacturer
 and description, which are preserved. An unlisted ID is `Unknown` in verbose
 output and omitted from the default view; a listed
 vendor is still shown when the product is unlisted. A missing or corrupt embedded
-database is an error (exit code `1`) when a USB lookup is needed, in either view.
+database is an error (exit code `1`) when a USB lookup is needed, at any output level.
 The lookup never accesses the network or opens a device. The database is
 MSZIP-compressed in the executable and decompressed once before the first
 USB lookup. Its memory is released after resolving the names; help/version
@@ -127,7 +158,8 @@ prints the actual executable size.
 `-Test` builds and runs C unit tests and PowerShell CLI smoke tests. Synthetic
 fixtures cover empty/error discovery and Unicode metadata without modifying or
 opening real devices. Unit tests cover port validation, sorting, merging, transport
-classification, USB identifier parsing, Unicode console output, exact UTF-8 bytes,
+classification, USB identifier parsing, Unicode console output, console colors
+and attribute restoration, plain redirected output, exact UTF-8 bytes,
 and output errors. USB tests cover deterministic conversion, source validation,
 failed-update preservation, deterministic MSZIP compression, decompression size
 limits and cleanup, corrupt/truncated streams, binary validation, scoped vendor/product lookup,
@@ -169,7 +201,7 @@ They do not change transport classification or verify device authenticity.
 
 comls does not infer a USB serial number from the trailing instance ID, which can
 instead be a Windows-generated location identifier. USB instance IDs are available
-in verbose output, but are not labeled as serial numbers.
+in full diagnostic output (`-vv`), but are not labeled as serial numbers.
 
 Only present devices are listed, not disconnected historical devices. Enumeration
 does **not** open ports, change settings, test communication, or check whether another

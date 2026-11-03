@@ -143,6 +143,12 @@ int port_list_load(PortList *list)
     if (!port_set(&port, PORT_NAME, L"COM10") ||
         !port_set(&port, PORT_DESCRIPTION, L"USB serial \u017dlu\u0165ou\u010dk\u00fd \u65e5\u672c \U0001f600 (COM10)") ||
         !port_set(&port, PORT_MANUFACTURER, L"Example manufacturer with a long full name") ||
+        !port_set(&port, PORT_HARDWARE, L"USB\\VID_0403&PID_6001&REV_0600") ||
+        !port_set(&port, PORT_LOCATION, L"Port_#0001.Hub_#0002") ||
+        !port_set(&port, PORT_DRIVER_PROVIDER, L"Example driver provider") ||
+        !port_set(&port, PORT_DRIVER_VERSION, L"2.12.36.4") ||
+        !port_set(&port, PORT_SERVICE, L"FTSER2K") ||
+        !port_set(&port, PORT_PARENT, L"USB\\VID_0403&PID_6001\\PARENT") ||
         !port_set(&port, PORT_USB_DEVICE, L"USB\\VID_0403&PID_6001&MI_02\\EXAMPLE") ||
         !port_set(&port, PORT_INSTANCE, L"USB\\VID_0403&PID_6001&MI_02\\EXAMPLE"))
         goto failed;
