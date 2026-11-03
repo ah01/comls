@@ -2,6 +2,7 @@
 #include "resource.h"
 
 #include <windows.h>
+#include <compressapi.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,6 +79,61 @@ invalid:
     return 0;
 }
 
+int usb_ids_unpack(UsbIds *ids, const void *data, size_t size)
+{
+    DECOMPRESSOR_HANDLE decompressor;
+    SIZE_T needed = 0, written = 0;
+    void *buffer = NULL;
+    DWORD error;
+    int ok = 0;
+    memset(ids, 0, sizeof(*ids));
+    if (!data || !size) {
+        SetLastError(ERROR_INVALID_DATA);
+        return 0;
+    }
+    if (!CreateDecompressor(COMPRESS_ALGORITHM_MSZIP, NULL, &decompressor))
+        return 0;
+    if (Decompress(decompressor, data, size, NULL, 0, &needed)) {
+        SetLastError(ERROR_INVALID_DATA);
+        goto done;
+    }
+    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+        goto done;
+    /* Reject corrupt size headers before allocating from the process heap. */
+    if (needed < 32 || needed > 64 * 1024 * 1024) {
+        SetLastError(ERROR_INVALID_DATA);
+        goto done;
+    }
+    buffer = malloc(needed);
+    if (!buffer) {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        goto done;
+    }
+    if (!Decompress(decompressor, data, size, buffer, needed, &written))
+        goto done;
+    if (written != needed) {
+        SetLastError(ERROR_INVALID_DATA);
+        goto done;
+    }
+    if (!usb_ids_open(ids, buffer, written))
+        goto done;
+    ids->allocation = buffer;
+    buffer = NULL;
+    ok = 1;
+done:
+    error = GetLastError();
+    CloseDecompressor(decompressor);
+    free(buffer);
+    SetLastError(error);
+    return ok;
+}
+
+void usb_ids_close(UsbIds *ids)
+{
+    free(ids->allocation);
+    memset(ids, 0, sizeof(*ids));
+}
+
 int usb_ids_load(UsbIds *ids)
 {
     HMODULE module = GetModuleHandleW(NULL);
@@ -104,7 +160,7 @@ int usb_ids_load(UsbIds *ids)
         SetLastError(ERROR_INVALID_DATA);
         return 0;
     }
-    return usb_ids_open(ids, data, size);
+    return usb_ids_unpack(ids, data, size);
 }
 
 static const unsigned char *find_id(const unsigned char *records,

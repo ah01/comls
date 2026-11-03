@@ -37,6 +37,7 @@ static int add_usb_names(PortList *list)
         if (!loaded) {
             if (!usb_ids_load(&ids)) {
                 report_error(L"Loading embedded USB database", GetLastError());
+                usb_ids_close(&ids);
                 return 0;
             }
             loaded = 1;
@@ -44,9 +45,11 @@ static int add_usb_names(PortList *list)
         if (!usb_ids_lookup(&ids, vid, pid, &port->text[PORT_USB_VENDOR],
                             &port->text[PORT_USB_PRODUCT])) {
             report_error(L"Looking up USB names", GetLastError());
+            usb_ids_close(&ids);
             return 0;
         }
     }
+    usb_ids_close(&ids);
     return 1;
 }
 

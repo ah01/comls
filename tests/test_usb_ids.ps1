@@ -61,6 +61,20 @@ Write-UsbIdsBinary (Read-UsbIds $inputPath) $second
 Assert-True ((Get-FileHash $outputPath).Hash -eq (Get-FileHash $second).Hash) `
     'UTF-8 BOM or CRLF changed the binary.'
 
+$compress = Join-Path $PSScriptRoot '..\scripts\compress-usb-ids.ps1'
+$packed = Join-Path $build 'test_usb_ids.mszip'
+$packedAgain = Join-Path $work 'second.mszip'
+& $compress -InputPath $outputPath -OutputPath $packed
+& $compress -InputPath $second -OutputPath $packedAgain
+Assert-True ((Get-FileHash $packed).Hash -eq (Get-FileHash $packedAgain).Hash) `
+    'MSZIP resource compression is not deterministic.'
+$productionRaw = Get-Item -LiteralPath (Join-Path $build 'usb_ids.bin')
+$productionPacked = Get-Item -LiteralPath (Join-Path $build 'usb_ids.mszip')
+Assert-True ($productionPacked.Length -lt $productionRaw.Length) `
+    'MSZIP did not reduce the production database size.'
+Assert-Rejected { $null = [Comls.MsZip]::Encode([byte[]]@()) } `
+    'Empty compression input was accepted.'
+
 $invalidPath = Join-Path $work 'invalid.ids'
 foreach ($invalid in @(
     '',
@@ -123,4 +137,4 @@ try {
 } finally {
     Remove-Item Function:\Invoke-WebRequest
 }
-Write-Host 'USB source conversion and update tests passed.'
+Write-Host 'USB source conversion, MSZIP compression, and update tests passed.'

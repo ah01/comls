@@ -45,7 +45,10 @@ displayed VID/PID. These are separate from the Windows-reported manufacturer
 and description, which are preserved. An unlisted ID is `Unknown`; a listed
 vendor is still shown when the product is unlisted. A missing or corrupt embedded
 database is an error (exit code `1`) when a verbose USB lookup is needed.
-The lookup never accesses the network or opens a device.
+The lookup never accesses the network or opens a device. The database is
+MSZIP-compressed in the executable and decompressed once before the first
+verbose USB lookup. Its memory is released after resolving the names; compact
+output, help/version, and scans without USB lookups do not decompress it.
 
 `--help` (`-h`) and `--version` do not enumerate devices.
 
@@ -80,8 +83,10 @@ pwsh -NoProfile -File .\build.ps1 -Test
 ```
 
 The script locates MSVC using `vswhere` and initializes its x64 environment.
-It converts the committed `data\usb.ids` into an indexed binary and uses the
-Windows SDK resource compiler (`rc.exe`) to embed it in the executable.
+It converts the committed `data\usb.ids` into an indexed binary, compresses it
+with MSZIP using the Windows Compression API, and uses the Windows SDK resource
+compiler (`rc.exe`) to embed it in the executable. The compression script uses
+PowerShell's built-in `Add-Type`; no extra tools or packages are needed.
 Normal builds do not download data and work offline.
 It works from a regular terminal; a Developer Command Prompt is not required.
 `build\comls.exe` is the standalone Release executable. Copy that file to a directory
@@ -92,17 +97,22 @@ The Release build optimizes for size, removes unused code, and statically links 
 C runtime (`/MT`), so the Visual C++ Redistributable is not required. The build prints
 the actual executable size; size and runtime vary with compiler and hardware.
 
-The uncompressed database increases executable size. A local build with the
-2026.06.26 snapshot measured **906,752 bytes (about 886 KiB)**, compared with the
-previous database-free reference of 149,504 bytes. These are local observations,
-not size guarantees; the build prints the actual size.
+A local build with the 2026.06.26 snapshot measured **441,344 bytes (431 KiB)**,
+compared with 906,752 bytes (about 886 KiB) with the uncompressed database.
+The 750,443-byte indexed database compresses to 285,180 bytes. A verbose USB
+lookup temporarily needs about 733 KiB for the decompressed data. Compression
+and decompression use the system `cabinet.dll`, available on the supported
+Windows versions; no additional DLL is distributed.
+These are local observations, not size or performance guarantees; the build
+prints the actual executable size.
 
 `-Test` builds and runs C unit tests and PowerShell CLI smoke tests. Synthetic
 fixtures cover empty/error discovery and Unicode metadata without modifying or
 opening real devices. Unit tests cover port validation, sorting, merging, transport
 classification, USB identifier parsing, Unicode console output, exact UTF-8 bytes,
 and output errors. USB tests cover deterministic conversion, source validation,
-failed-update preservation, binary validation, scoped vendor/product lookup,
+failed-update preservation, deterministic MSZIP compression, decompression size
+limits and cleanup, corrupt/truncated streams, binary validation, scoped vendor/product lookup,
 Unicode names, USB-only verbose enrichment, missing/corrupt resources, and
 standalone execution without external data files. CLI smoke tests also enumerate local
 devices, but do not require a particular port or attached hardware.
@@ -173,8 +183,10 @@ and unique IDs before replacing the old snapshot. A failed download or validatio
 leaves the old file unchanged. Review and commit the resulting diff; rebuilding
 is required to update the names in an existing executable.
 
-The build-time converter is `scripts\convert-usb-ids.ps1`; generated binaries and
-resources stay under ignored `build\`. It includes all vendors/products, ignoring
+The build-time converter is `scripts\convert-usb-ids.ps1`, followed by
+`scripts\compress-usb-ids.ps1`. The indexed `build\usb_ids.bin` is compressed to
+`build\usb_ids.mszip`, which is embedded as RCDATA; generated binaries and
+resources stay under ignored `build\`. The converter includes all vendors/products, ignoring
 USB interface names, classes, and the remaining non-device sections (which can
 contain legacy-encoded text). Runtime lookup uses sorted vendor/product indexes,
 binary search, and an uncompressed UTF-8 string pool. Format version 1 uses
@@ -182,7 +194,12 @@ little-endian 32-bit integers: a 32-byte header (`CUSBIDS\0`, version, vendor co
 product count, string-pool offset, string-pool size, reserved zero), 16-byte vendor
 records (VID, relative name offset, first product index, product count), 8-byte
 product records (PID, relative name offset), and NUL-terminated strings. Product
-ranges are contiguous and sorted within each sorted vendor.
+ranges are contiguous and sorted within each sorted vendor. This indexed format
+is unchanged by compression: the resource uses the Windows Compression API's
+MSZIP buffer format, which carries the decompressed size. Both build-time
+compression and runtime decompression limit the indexed data to 64 MiB.
+After decompression, the indexed database is validated before any lookups;
+decompression failures use the same error path as other corrupt-resource errors.
 
 ## License
 

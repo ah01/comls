@@ -2,6 +2,7 @@
 #include "resource.h"
 
 #include <windows.h>
+#include <compressapi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +38,33 @@ static void write32(unsigned char *p, uint32_t value)
         p[i] = (unsigned char)(value >> (i * 8));
 }
 
+static unsigned char *pack(const void *data, size_t size, size_t *packed_size)
+{
+    COMPRESSOR_HANDLE compressor;
+    SIZE_T needed;
+    unsigned char *packed;
+    CHECK(CreateCompressor(COMPRESS_ALGORITHM_MSZIP, NULL, &compressor));
+    CHECK(!Compress(compressor, data, size, NULL, 0, &needed));
+    CHECK(GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+    packed = malloc(needed);
+    CHECK(packed);
+    CHECK(Compress(compressor, data, size, packed, needed, packed_size));
+    CHECK(CloseCompressor(compressor));
+    return packed;
+}
+
+static void reject_packed(const unsigned char *bytes, size_t size)
+{
+    UsbIds ids;
+    SetLastError(ERROR_SUCCESS);
+    CHECK(!usb_ids_unpack(&ids, bytes, size));
+    CHECK(GetLastError() != ERROR_SUCCESS);
+    CHECK(!ids.vendors && !ids.products && !ids.strings && !ids.allocation);
+    CHECK(!ids.vendor_count && !ids.product_count && !ids.strings_size);
+    usb_ids_close(&ids);
+    usb_ids_close(&ids);
+}
+
 static void reject(const unsigned char *bytes, size_t size)
 {
     UsbIds ids;
@@ -44,6 +72,13 @@ static void reject(const unsigned char *bytes, size_t size)
     CHECK(!usb_ids_open(&ids, bytes, size));
     CHECK(GetLastError() == ERROR_INVALID_DATA);
     CHECK(!ids.vendors && !ids.products && !ids.strings && !ids.vendor_count);
+    usb_ids_close(&ids);
+    if (bytes && size) {
+        size_t packed_size;
+        unsigned char *packed = pack(bytes, size, &packed_size);
+        reject_packed(packed, packed_size);
+        free(packed);
+    }
 }
 
 static void check_invalid(const unsigned char *original, size_t size)
@@ -100,6 +135,46 @@ static void check_invalid(const unsigned char *original, size_t size)
     free(copy);
 }
 
+static void check_compression(const unsigned char *packed, size_t packed_size)
+{
+    unsigned char *copy = malloc(packed_size);
+    unsigned char *large, *encoded;
+    UsbIds oversized;
+    size_t i, encoded_size;
+    const uint32_t large_size = 64 * 1024 * 1024 + 1;
+    CHECK(copy);
+    reject_packed(NULL, packed_size);
+    for (i = 0; i < packed_size; ++i)
+        reject_packed(packed, i);
+    memcpy(copy, packed, packed_size);
+    copy[0] ^= 1;
+    reject_packed(copy, packed_size);
+    memset(copy, 0, packed_size);
+    reject_packed(copy, packed_size);
+    free(copy);
+
+    large = malloc(large_size);
+    CHECK(large);
+    memset(large, 0, 58);
+    memcpy(large, "CUSBIDS\0", 8);
+    write32(large + 8, 1);
+    write32(large + 12, 1);
+    write32(large + 16, 1);
+    write32(large + 20, 56);
+    write32(large + 24, large_size - 56);
+    write32(large + 44, 1);
+    write32(large + 52, 2);
+    large[56] = 'V';
+    memset(large + 58, 'P', large_size - 59);
+    large[large_size - 1] = 0;
+    CHECK(usb_ids_open(&oversized, large, large_size));
+    usb_ids_close(&oversized);
+    encoded = pack(large, large_size, &encoded_size);
+    reject_packed(encoded, encoded_size);
+    free(encoded);
+    free(large);
+}
+
 static void check_production(const wchar_t *path)
 {
     HMODULE module = LoadLibraryExW(path, NULL,
@@ -113,7 +188,8 @@ static void check_production(const wchar_t *path)
     notice = FindResourceW(module, MAKEINTRESOURCEW(IDR_USB_IDS_NOTICE), RT_RCDATA);
     CHECK(resource && notice && SizeofResource(module, notice) > 0);
     bytes = LockResource(LoadResource(module, resource));
-    CHECK(usb_ids_open(&ids, bytes, SizeofResource(module, resource)));
+    CHECK(usb_ids_unpack(&ids, bytes, SizeofResource(module, resource)));
+    CHECK(ids.allocation);
     for (i = 0; i < ids.vendor_count; ++i) {
         const unsigned char *v = ids.vendors + (size_t)i * 16;
         uint32_t j, count = read32(v + 12), first = read32(v + 8);
@@ -126,6 +202,7 @@ static void check_production(const wchar_t *path)
             free(product);
         }
     }
+    usb_ids_close(&ids);
     CHECK(FreeLibrary(module));
 }
 
@@ -136,11 +213,16 @@ int wmain(int argc, wchar_t **argv)
     HRSRC resource = FindResourceW(module, MAKEINTRESOURCEW(IDR_USB_IDS), RT_RCDATA);
     DWORD size;
     const unsigned char *bytes;
+    const unsigned char *raw;
+    size_t raw_size;
+    unsigned i;
+    wchar_t *vendor, *product;
     CHECK(resource);
     size = SizeofResource(module, resource);
     bytes = LockResource(LoadResource(module, resource));
     CHECK(bytes);
     CHECK(usb_ids_load(&ids));
+    CHECK(ids.allocation);
     CHECK(ids.vendor_count == 5 && ids.product_count == 5);
     check_lookup(&ids, 0, 0, L"First vendor", L"Zero product");
     check_lookup(&ids, 0x0403, 0x6001, L"Example USB vendor \u65e5\U0001f600",
@@ -154,9 +236,32 @@ int wmain(int argc, wchar_t **argv)
     check_lookup(&ids, 1, 0x6001, NULL, NULL);
     check_lookup(&ids, 0x10000, 0x6001, NULL, NULL);
     check_lookup(&ids, 0, 0x10000, L"First vendor", NULL);
-    check_invalid(bytes, size);
+    raw = ids.vendors - 32;
+    raw_size = 32 + (size_t)ids.vendor_count * 16 +
+        (size_t)ids.product_count * 8 + ids.strings_size;
+    {
+        UsbIds borrowed;
+        CHECK(usb_ids_open(&borrowed, raw, raw_size));
+        CHECK(!borrowed.allocation);
+        usb_ids_close(&borrowed);
+    }
+    check_invalid(raw, raw_size);
+    check_compression(bytes, size);
+    CHECK(usb_ids_lookup(&ids, 0xffff, 0xffff, &vendor, &product));
+    usb_ids_close(&ids);
+    CHECK(!ids.vendors && !ids.products && !ids.strings && !ids.allocation);
+    CHECK(!ids.vendor_count && !ids.product_count && !ids.strings_size);
+    CHECK(wcscmp(vendor, L"Last vendor") == 0 && wcscmp(product, L"Last product") == 0);
+    free(vendor);
+    free(product);
+    usb_ids_close(&ids);
+    for (i = 0; i < 10; ++i) {
+        CHECK(usb_ids_load(&ids));
+        check_lookup(&ids, 0x1234, 0x6001, L"Other vendor", L"Other product");
+        usb_ids_close(&ids);
+    }
     CHECK(argc == 2);
     check_production(argv[1]);
-    puts("USB binary validation and lookup tests passed.");
+    puts("USB MSZIP decompression, binary validation, and lookup tests passed.");
     return 0;
 }
