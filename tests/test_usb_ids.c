@@ -187,9 +187,13 @@ static void check_production(const wchar_t *path)
     resource = FindResourceW(module, MAKEINTRESOURCEW(IDR_USB_IDS), RT_RCDATA);
     notice = FindResourceW(module, MAKEINTRESOURCEW(IDR_USB_IDS_NOTICE), RT_RCDATA);
     CHECK(resource && notice && SizeofResource(module, notice) > 0);
+    notice = FindResourceW(module, MAKEINTRESOURCEW(IDR_RASPBERRY_PI_NOTICE), RT_RCDATA);
+    CHECK(notice && SizeofResource(module, notice) > 0);
     bytes = LockResource(LoadResource(module, resource));
     CHECK(usb_ids_unpack(&ids, bytes, SizeofResource(module, resource)));
     CHECK(ids.allocation);
+    check_lookup(&ids, 0x2e8a, 0x0003, L"Raspberry Pi", L"Raspberry Pi RP2040 boot");
+    check_lookup(&ids, 0x2e8a, 0x1000, L"Raspberry Pi", L"Cytron Maker Pi RP2040");
     for (i = 0; i < ids.vendor_count; ++i) {
         const unsigned char *v = ids.vendors + (size_t)i * 16;
         uint32_t j, count = read32(v + 12), first = read32(v + 8);

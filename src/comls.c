@@ -301,7 +301,10 @@ int wmain(int argc, wchar_t **argv)
         printed = output_text(stream, help_text);
     else if (version)
         printed = output_text(stream, L"comls " COMLS_VERSION
-                              L"\nusb.ids " COMLS_USB_IDS_DATE L"\n");
+                              L"\n\nUSB vendor and product ID sources:\n"
+                              L"  usb.ids: " COMLS_USB_IDS_DATE
+                              L"\n  raspberrypi/usb-pid: " COMLS_RASPBERRY_PI_DATE
+                              L" (" COMLS_RASPBERRY_PI_COMMIT L")\n");
     else {
         if (!port_list_load(&list)) {
             port_list_clear(&list);

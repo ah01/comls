@@ -2,3 +2,4 @@
 
 IDR_USB_IDS RCDATA "build\\usb_ids.mszip"
 IDR_USB_IDS_NOTICE RCDATA "data\\usb.ids.LICENSE"
+IDR_RASPBERRY_PI_NOTICE RCDATA "data\\raspberrypi-usb-pid.LICENSE"
