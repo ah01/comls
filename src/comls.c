@@ -9,15 +9,18 @@
 #include <wctype.h>
 
 static const wchar_t help_text[] =
-    L"Usage: comls [--usb-only | -u] [--verbose | -v | -d | -vv] [--help | -h] [--version]\n"
+    L"Usage: comls [--usb-only | -u] [--sort-by-time | -t] [--verbose | -v | -d | -vv] [--help | -h] [--version]\n"
     L"\nList currently present Windows COM ports without opening them.\n"
     L"\n"
     L"  -v, --verbose  Show common device details\n"
     L"  -d            Alias for -v (details)\n"
     L"  -vv           Show all device and driver details (or repeat -v)\n"
     L"  -u, --usb-only Show only ports classified as USB\n"
+    L"  -t, --sort-by-time Sort by last arrival, newest first (unknown times last)\n"
     L"  -h, --help     Show this help without discovering devices\n"
     L"      --version  Show the version without discovering devices\n"
+    L"\nCompact output groups ports that arrived within the last 5 minutes.\n"
+    L"Verbose output includes the last arrival in local time and its relative age.\n"
     L"\n"
     L"Exit codes: 0 = success (including no ports), 1 = error, 2 = invalid arguments.\n";
 
@@ -180,6 +183,95 @@ static int print_summary(HANDLE stream, const PortList *list)
     return output_text(stream, first ? L":\n\n" : L"):\n\n");
 }
 
+#ifdef COMLS_TEST_FIXTURE
+uint64_t fixture_reference_time(void);
+#endif
+
+static uint64_t output_reference_time(void)
+{
+#ifdef COMLS_TEST_FIXTURE
+    return fixture_reference_time();
+#else
+    FILETIME time;
+    GetSystemTimeAsFileTime(&time);
+    return ((uint64_t)time.dwHighDateTime << 32) | time.dwLowDateTime;
+#endif
+}
+
+typedef struct {
+    uint64_t amount;
+    const wchar_t *unit;
+    const wchar_t *compact_unit;
+} ArrivalAge;
+
+static ArrivalAge arrival_age(const Port *port, uint64_t now)
+{
+    uint64_t seconds = (port->last_arrival > now ?
+                        port->last_arrival - now : now - port->last_arrival) /
+        UINT64_C(10000000);
+    if (seconds < 60)
+        return (ArrivalAge){ seconds, L"second", L"s" };
+    if (seconds < 3600)
+        return (ArrivalAge){ seconds / 60, L"minute", L"min" };
+    if (seconds < 86400)
+        return (ArrivalAge){ seconds / 3600, L"hour", L"h" };
+    return (ArrivalAge){ seconds / 86400, L"day", L"d" };
+}
+
+static int print_arrival(HANDLE stream, const Port *port, uint64_t now)
+{
+    FILETIME utc_time;
+    SYSTEMTIME utc, local;
+    ArrivalAge age;
+    int future = port->last_arrival > now;
+    if (!port->has_last_arrival)
+        return print_detail(stream, L"Last arrival", L"Unknown", OUTPUT_DEFAULT);
+    utc_time.dwHighDateTime = (DWORD)(port->last_arrival >> 32);
+    utc_time.dwLowDateTime = (DWORD)port->last_arrival;
+    if (!FileTimeToSystemTime(&utc_time, &utc) ||
+        !SystemTimeToTzSpecificLocalTimeEx(NULL, &utc, &local))
+        return 0;
+    age = arrival_age(port, now);
+    if (!print_detail_label(stream, L"Last arrival") ||
+        !output_format(stream, L"%04u-%02u-%02u %02u:%02u:%02u (",
+                       (unsigned)local.wYear, (unsigned)local.wMonth, (unsigned)local.wDay,
+                       (unsigned)local.wHour, (unsigned)local.wMinute, (unsigned)local.wSecond))
+        return 0;
+    if (!age.amount)
+        return output_text(stream, future ? L"in less than a second)\n" : L"just now)\n");
+    return output_format(stream, L"%ls%llu %ls%ls%ls)\n",
+                         future ? L"in " : L"", (unsigned long long)age.amount,
+                         age.unit, age.amount == 1 ? L"" : L"s", future ? L"" : L" ago");
+}
+
+static int print_compact_age(HANDLE stream, const Port *port, uint64_t now)
+{
+    ArrivalAge age;
+    if (!port->has_last_arrival)
+        return 1;
+    age = arrival_age(port, now);
+    return output_color_format(stream, OUTPUT_AQUA, L" %lc%llu %ls",
+                               port->last_arrival > now ? L'-' : L'+',
+                               (unsigned long long)age.amount, age.compact_unit);
+}
+
+static int print_compact_port(HANDLE stream, const Port *port,
+                              int port_width, int type_width, uint64_t now)
+{
+    const wchar_t *type = compact_transport_name(port->transport);
+    size_t description_length = compact_description_length(port);
+    if (description_length > INT_MAX) {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return 0;
+    }
+    return output_format(stream, L"%-*ls  ", port_width, field_text(port, PORT_NAME)) &&
+        output_color_format(stream, transport_color(port->transport), L"(%ls)", type) &&
+        output_format(stream, L"%*ls %.*ls", type_width - (int)wcslen(type), L"",
+                      (int)description_length, field_text(port, PORT_DESCRIPTION)) &&
+        print_compact_details(stream, port) && print_compact_age(stream, port, now) &&
+        output_text(stream, L"\n");
+}
+
 static int print_ports(HANDLE stream, PortList *list, int verbose)
 {
     static const struct {
@@ -199,12 +291,15 @@ static int print_ports(HANDLE stream, PortList *list, int verbose)
         { L"USB instance", PORT_USB_DEVICE, 1 }
     };
     size_t i, field;
+    uint64_t now = output_reference_time();
     int port_width = 4, type_width = 3;
     if (!print_summary(stream, list))
         return 0;
     if (!list->count)
         return 1;
     if (!verbose) {
+        size_t recent = 0;
+        int group, groups;
         for (i = 0; i < list->count; ++i) {
             size_t length = wcslen(list->items[i].text[PORT_NAME]);
             int type_length = (int)wcslen(compact_transport_name(list->items[i].transport));
@@ -214,26 +309,21 @@ static int print_ports(HANDLE stream, PortList *list, int verbose)
                 port_width = (int)length;
             if (type_length > type_width)
                 type_width = type_length;
+            if (port_is_recent(&list->items[i], now))
+                ++recent;
         }
-        for (i = 0; i < list->count; ++i) {
-            const Port *port = &list->items[i];
-            const wchar_t *type = compact_transport_name(port->transport);
-            size_t description_length = compact_description_length(port);
-            if (description_length > INT_MAX) {
-                SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        groups = recent && recent < list->count ? 2 : 1;
+        for (group = 0; group < groups; ++group) {
+            if (recent && !output_color_format(stream, OUTPUT_GRAY, L"%ls", group == 0 ?
+                                      L"Recent (last 5 minutes):\n" : L"\nRest:\n"))
                 return 0;
+            for (i = 0; i < list->count; ++i) {
+                const Port *port = &list->items[i];
+                if (recent && port_is_recent(port, now) != (group == 0))
+                    continue;
+                if (!print_compact_port(stream, port, port_width, type_width, now))
+                    return 0;
             }
-            if (!output_format(stream, L"%-*ls  ",
-                               port_width, field_text(port, PORT_NAME)) ||
-                !output_color_format(stream, transport_color(port->transport), L"(%ls)", type) ||
-                !output_format(stream, L"%*ls %.*ls",
-                               type_width - (int)wcslen(type), L"",
-                               (int)description_length, field_text(port, PORT_DESCRIPTION)))
-                return 0;
-            if (!print_compact_details(stream, port))
-                return 0;
-            if (!output_text(stream, L"\n"))
-                return 0;
         }
         return 1;
     }
@@ -242,7 +332,8 @@ static int print_ports(HANDLE stream, PortList *list, int verbose)
         unsigned vid, pid, interface_number;
         if (!output_format(stream, L"%ls%ls\n", i ? L"\n" : L"", field_text(port, PORT_NAME)) ||
             !print_detail(stream, L"Type", transport_name(port->transport),
-                          transport_color(port->transport)))
+                          transport_color(port->transport)) ||
+            !print_arrival(stream, port, now))
             return 0;
         for (field = 0; field < ARRAYSIZE(details); ++field) {
             if (details[field].full_only && verbose < 2)
@@ -277,7 +368,7 @@ int wmain(int argc, wchar_t **argv)
 {
     PortList list = {0};
     HANDLE stream = GetStdHandle(STD_OUTPUT_HANDLE);
-    int i, verbose = 0, usb_only = 0, help = 0, version = 0, printed;
+    int i, verbose = 0, usb_only = 0, sort_by_time = 0, help = 0, version = 0, printed;
     for (i = 1; i < argc; ++i) {
         if (wcscmp(argv[i], L"--verbose") == 0 || wcscmp(argv[i], L"-v") == 0 ||
             wcscmp(argv[i], L"-d") == 0) {
@@ -287,6 +378,8 @@ int wmain(int argc, wchar_t **argv)
             verbose = 2;
         else if (wcscmp(argv[i], L"--usb-only") == 0 || wcscmp(argv[i], L"-u") == 0)
             usb_only = 1;
+        else if (wcscmp(argv[i], L"--sort-by-time") == 0 || wcscmp(argv[i], L"-t") == 0)
+            sort_by_time = 1;
         else if (wcscmp(argv[i], L"--help") == 0 || wcscmp(argv[i], L"-h") == 0)
             help = 1;
         else if (wcscmp(argv[i], L"--version") == 0)
@@ -312,6 +405,8 @@ int wmain(int argc, wchar_t **argv)
         }
         if (usb_only)
             keep_usb_ports(&list);
+        if (sort_by_time)
+            port_list_sort_by_time(&list);
         if (!add_usb_names(&list)) {
             port_list_clear(&list);
             return 1;

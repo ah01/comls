@@ -56,6 +56,10 @@ int port_list_add(PortList *list, Port *port)
         }
         if (existing->transport < port->transport)
             existing->transport = port->transport;
+        if (!existing->has_last_arrival && port->has_last_arrival) {
+            existing->last_arrival = port->last_arrival;
+            existing->has_last_arrival = 1;
+        }
         port_clear(port);
         return 1;
     }
@@ -90,6 +94,22 @@ void port_list_sort(PortList *list)
         qsort(list->items, list->count, sizeof(*list->items), port_compare);
 }
 
+static int port_time_compare(const void *left, const void *right)
+{
+    const Port *a = left, *b = right;
+    if (a->has_last_arrival != b->has_last_arrival)
+        return a->has_last_arrival ? -1 : 1;
+    if (a->has_last_arrival && a->last_arrival != b->last_arrival)
+        return a->last_arrival > b->last_arrival ? -1 : 1;
+    return port_compare(left, right);
+}
+
+void port_list_sort_by_time(PortList *list)
+{
+    if (list->count > 1)
+        qsort(list->items, list->count, sizeof(*list->items), port_time_compare);
+}
+
 void port_list_clear(PortList *list)
 {
     size_t i;
@@ -97,6 +117,12 @@ void port_list_clear(PortList *list)
         port_clear(&list->items[i]);
     free(list->items);
     memset(list, 0, sizeof(*list));
+}
+
+int port_is_recent(const Port *port, uint64_t now)
+{
+    return port->has_last_arrival && port->last_arrival <= now &&
+        now - port->last_arrival <= UINT64_C(300) * 10000000;
 }
 
 static int starts_with(const wchar_t *text, const wchar_t *prefix)

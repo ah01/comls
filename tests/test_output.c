@@ -34,10 +34,11 @@ static void check_utf8(void)
     CHECK(output_color_format(write_handle, OUTPUT_BLUE, L"%ls", L"BL"));
     CHECK(output_color_format(write_handle, OUTPUT_YELLOW, L" %ls", L"USB"));
     CHECK(output_color_format(write_handle, OUTPUT_GRAY, L" [%d]", 17));
+    CHECK(output_color_format(write_handle, OUTPUT_AQUA, L" +%d min", 5));
     CHECK(CloseHandle(write_handle));
     CHECK(ReadFile(read_handle, actual, sizeof(actual), &read_bytes, NULL));
-    CHECK(read_bytes == strlen("BL USB [17]"));
-    CHECK(memcmp(actual, "BL USB [17]", read_bytes) == 0);
+    CHECK(read_bytes == strlen("BL USB [17] +5 min"));
+    CHECK(memcmp(actual, "BL USB [17] +5 min", read_bytes) == 0);
     CHECK(CloseHandle(read_handle));
     CHECK(CreatePipe(&read_handle, &write_handle, NULL, 0));
     CHECK(CloseHandle(read_handle));
@@ -85,6 +86,7 @@ static void check_colors(void)
         { OUTPUT_BLUE, FOREGROUND_BLUE | FOREGROUND_INTENSITY },
         { OUTPUT_YELLOW, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY },
         { OUTPUT_GRAY, FOREGROUND_INTENSITY },
+        { OUTPUT_AQUA, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY },
         { OUTPUT_DEFAULT, FOREGROUND_RED | FOREGROUND_GREEN }
     };
     HANDLE buffer;

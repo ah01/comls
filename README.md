@@ -33,6 +33,8 @@ not code-signed, so Windows SmartScreen may warn about an unfamiliar executable.
 .\build\comls.exe -vv
 .\build\comls.exe --usb-only
 .\build\comls.exe -u -v
+.\build\comls.exe --sort-by-time
+.\build\comls.exe -t -u -v
 .\build\comls.exe --version
 .\build\comls.exe --help
 ```
@@ -42,6 +44,13 @@ either detail level (`-v`, `-d`, or `-vv`). The summary counts only the selected
 backed by a USB radio are excluded, as are native, virtual, and unknown ports.
 When no USB ports match, the usual empty-list output is shown and the exit code
 is `0`. Help and version output do not enumerate devices even with this option.
+
+`--sort-by-time` (`-t`) orders ports by last arrival, newest first, instead of
+their COM numbers. Equal timestamps are ordered numerically by COM number;
+ports with unknown timestamps come last, also in numeric order.
+The option works with both detail levels and `--usb-only`. In compact output,
+Recent remains before Rest, with time sorting applied within each section.
+Verbose output uses time sorting across the entire selected list.
 
 The default view shows aligned port names, connection types in parentheses, and
 descriptions, without a table header. Optional details follow the description as
@@ -53,6 +62,17 @@ if no details remain, the square brackets are omitted. Values are not truncated.
 A missing description is still shown as `Unknown`. Bluetooth is abbreviated
 as `BL`; other connection types retain their names. Ports are sorted numerically
 (`COM2` before `COM10`).
+When the last-arrival time is known, the line ends with a compact age such as
+` +5 min`, using whole seconds (`s`), minutes (`min`), hours (`h`), or days (`d`).
+Less than one second ago is ` +0 s`; future timestamps use a minus sign.
+Missing ages are omitted. The age follows any square-bracketed device details.
+When at least one port has a known last-arrival time within the last five minutes
+(including exactly five minutes ago), the default view places all such ports
+under `Recent (last 5 minutes):` and the remaining ports under `Rest:`.
+Each section retains the selected ordering and shared column alignment.
+An empty `Rest:` section is omitted. If no ports qualify as recent, the default
+view stays ungrouped. The five-minute window is fixed; `--usb-only` filters ports
+before grouping and counting. Missing or future arrival times do not qualify as recent.
 All output levels start with the total number of present ports and a breakdown by connection
 type, followed by a blank line. Types with no ports are omitted; an empty list shows
 `Found 0 ports:` followed by a blank line.
@@ -62,7 +82,8 @@ preserves the original description.
 
 When standard output is a Windows console (including Windows Terminal), the
 default view colors `(BL)` blue, `(USB)` yellow, and the trailing square-bracketed
-details gray. Both verbose levels use the same type colors in their detail
+details and Recent/Rest section headings gray, and compact ages aqua.
+Both verbose levels use the same type colors in their detail
 blocks, with detail labels in gray. Other text
 retains the terminal's original colors.
 Console support is detected automatically using Windows console APIs;
@@ -74,8 +95,20 @@ Illustrative output (not a scan of your computer):
 ```text
 Found 2 ports (1 bluetooth, 1 USB):
 
-COM1   (USB) USB Serial Port [FTDI, USB: Future Technology Devices International, Ltd / FT232 Serial (UART) IC]
-COM10  (BL)  Bluetooth serial port
+COM1   (USB) USB Serial Port [FTDI, USB: Future Technology Devices International, Ltd / FT232 Serial (UART) IC] +15 min
+COM10  (BL)  Bluetooth serial port +9 h
+```
+
+Illustrative grouped output:
+
+```text
+Found 2 ports (1 bluetooth, 1 USB):
+
+Recent (last 5 minutes):
+COM1   (USB) USB Serial Port +2 min
+
+Rest:
+COM10  (BL)  Bluetooth serial port +9 h
 ```
 
 `--verbose` (`-v`, with `-d` as an alias for details) shows only a detail block
@@ -92,6 +125,22 @@ available, even when both names are known.
 Repeating detail flags (for example, `-v -v` or `--verbose --verbose`) also selects
 the full level; further repetitions stay at that level.
 Both levels use the same colors and support `--usb-only`.
+
+Both detail levels include `Last arrival:`, with the computer's local date and
+time (including daylight saving time), and a relative age, for example
+`2026-11-03 19:35:00 (5 minutes ago)`.
+Relative ages use whole seconds, minutes, hours, or days; less than one second
+ago is `just now`. A future timestamp is shown as `in ...`, not marked recent.
+All ports in one output use the same reference time. Missing arrival metadata
+is `Unknown`. Verbose output remains an ungrouped list of detail blocks,
+ordered numerically unless `--sort-by-time` is selected.
+
+The timestamp comes from Windows `DEVPKEY_Device_LastArrivalDate` for the COM
+device node. It records the latest Plug and Play arrival, not necessarily physical
+cable insertion: reboot, re-enumeration, or device/driver restart can update it.
+Multiple ports of one device can have the same arrival time. Availability depends
+on the device and Windows; installation dates and parent-device timestamps are
+not used as substitutes. No port is opened and no connection history is stored.
 
 Both detail levels preserve full manufacturer and description values. Missing metadata
 is shown as `Unknown`. Every detail label ends with a colon, with values aligned

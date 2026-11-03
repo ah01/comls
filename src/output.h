@@ -7,7 +7,8 @@ typedef enum {
     OUTPUT_DEFAULT,
     OUTPUT_BLUE,
     OUTPUT_YELLOW,
-    OUTPUT_GRAY
+    OUTPUT_GRAY,
+    OUTPUT_AQUA
 } OutputColor;
 
 int output_text(HANDLE stream, const wchar_t *text);
