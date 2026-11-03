@@ -3,5 +3,6 @@
 
 #define IDR_USB_IDS 101
 #define IDR_USB_IDS_NOTICE 102
+#define IDR_RASPBERRY_PI_NOTICE 103
 
 #endif

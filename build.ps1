@@ -25,6 +25,7 @@ New-Item -ItemType Directory -Path $build -Force | Out-Null
 & (Join-Path $PSScriptRoot 'scripts\compress-usb-ids.ps1') `
     -InputPath (Join-Path $build 'usb_ids.bin') -OutputPath (Join-Path $build 'usb_ids.mszip')
 if ($Test) {
+    & (Join-Path $PSScriptRoot 'tests\test_raspberrypi_usb_pid.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_usb_ids.ps1')
 }
 $flags = '/nologo /std:c17 /W4 /WX /utf-8 /O1 /GL /Gy /Gw /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /Isrc /Ibuild'

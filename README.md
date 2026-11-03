@@ -40,9 +40,12 @@ column to 26 characters; verbose details preserve the full value. Missing metada
 is shown as `Unknown`.
 
 For ports classified as `USB`, verbose details also include `USB vendor` and
-`USB product`, resolved from the embedded USB ID Repository snapshot using the
-displayed VID/PID. These are separate from the Windows-reported manufacturer
-and description, which are preserved. An unlisted ID is `Unknown`; a listed
+`USB product`, resolved from the embedded USB ID Repository snapshot, supplemented
+with the [Raspberry Pi USB product ID list](https://github.com/raspberrypi/usb-pid)
+for VID `2E8A`, using the displayed VID/PID. Existing usb.ids names take precedence;
+the supplement adds missing products using their Product Description, excluding
+reservations and empty descriptions. These are separate from the Windows-reported
+manufacturer and description, which are preserved. An unlisted ID is `Unknown`; a listed
 vendor is still shown when the product is unlisted. A missing or corrupt embedded
 database is an error (exit code `1`) when a verbose USB lookup is needed.
 The lookup never accesses the network or opens a device. The database is
@@ -51,16 +54,22 @@ verbose USB lookup. Its memory is released after resolving the names; compact
 output, help/version, and scans without USB lookups do not decompress it.
 
 `--help` (`-h`) and `--version` do not enumerate devices.
-`--version` also shows the embedded database's upstream snapshot date:
+`--version` also shows the embedded database sources' upstream snapshot dates
+and the Raspberry Pi source commit:
 
 ```text
 comls 0.1.0
-usb.ids 2026-06-26
+
+USB vendor and product ID sources:
+  usb.ids: 2026-06-26
+  raspberrypi/usb-pid: 2026-10-16 (550d9fc1a39859daa80321c4ec1341c1bdabb7de)
 ```
 
-The date comes from the source snapshot's `# Date:` header, not its Git commit
-or the build time. It is compiled into the executable without decompressing
-the database, so version output works without Git history or external files.
+The usb.ids date comes from the source snapshot's `# Date:` header. The Raspberry
+Pi date is the UTC commit date of the latest source revision affecting `Readme.md`,
+and its full commit SHA identifies the downloaded revision. Neither date is the
+download or build time. This metadata is compiled into the executable without
+decompressing the database, so version output works without Git history or external files.
 
 | Exit code | Meaning |
 | --- | --- |
@@ -93,8 +102,9 @@ pwsh -NoProfile -File .\build.ps1 -Test
 ```
 
 The script locates MSVC using `vswhere` and initializes its x64 environment.
-It converts the committed `data\usb.ids` into an indexed binary, compresses it
-with MSZIP using the Windows Compression API, and uses the Windows SDK resource
+It loads the committed `data\usb.ids` and `data\raspberrypi-usb-pid.json`, merges
+missing Raspberry Pi products in memory, converts the result into an indexed binary,
+compresses it with MSZIP using the Windows Compression API, and uses the Windows SDK resource
 compiler (`rc.exe`) to embed it in the executable. The compression script uses
 PowerShell's built-in `Add-Type`; no extra tools or packages are needed.
 Normal builds do not download data and work offline.
@@ -124,7 +134,9 @@ and output errors. USB tests cover deterministic conversion, source validation,
 failed-update preservation, deterministic MSZIP compression, decompression size
 limits and cleanup, corrupt/truncated streams, binary validation, scoped vendor/product lookup,
 Unicode names, USB-only verbose enrichment, missing/corrupt resources, and
-standalone execution without external data files. CLI smoke tests also enumerate local
+standalone execution without external data files. Raspberry Pi tests cover Markdown
+table parsing, reservations, source provenance, collision precedence, deterministic
+merging, and paired-update failure preservation. CLI smoke tests also enumerate local
 devices, but do not require a particular port or attached hardware.
 
 GitHub Actions runs the same build and tests on Windows for pushes and pull requests.
@@ -180,7 +192,9 @@ documentation, and other authored text are in English.
 
 ## Updating the USB database
 
-The complete upstream snapshot is committed as `data\usb.ids`. To update it:
+The complete USB ID Repository snapshot is committed as `data\usb.ids`.
+Normalized Raspberry Pi assignments and their repository, path, source timestamp,
+and commit are committed together as `data\raspberrypi-usb-pid.json`. To update both:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\update-usb-ids.ps1
@@ -190,8 +204,20 @@ pwsh -NoProfile -File .\build.ps1 -Test
 The update script explicitly downloads https://usb-ids.gowdy.us/usb.ids over HTTPS
 with a timeout and no redirects. It validates vendor/product syntax, UTF-8 names,
 and unique IDs, plus a valid upstream date header, before replacing the old snapshot. A failed download or validation
-leaves the old file unchanged. Review and commit the resulting diff; rebuilding
-is required to update the names in an existing executable.
+leaves the old snapshots unchanged. It also queries the public GitHub REST API
+for the latest commit affecting `raspberrypi/usb-pid`'s `Readme.md`, downloads that
+file pinned to the returned full SHA, and validates its VID, table structure,
+unique PIDs, and UTF-8 product descriptions. Both downloads use HTTPS, a timeout,
+and no redirects. GitHub API errors, including rate limits, fail the update
+explicitly; normal builds never use the API.
+
+Both sources are staged and validated before replacing either snapshot. If a
+replacement fails, the script restores the previous snapshots; a filesystem error
+that also prevents restoration is reported and leaves recovery backups in place.
+Review and commit both resulting snapshots; rebuilding is required to update
+the names in an existing executable. The original usb.ids file is not modified
+by the Raspberry Pi import. All usable assignments under VID `2E8A` are included,
+not only RP2040 products; no MCU type or transport is inferred from a PID.
 
 The build-time converter is `scripts\convert-usb-ids.ps1`, followed by
 `scripts\compress-usb-ids.ps1`. The indexed `build\usb_ids.bin` is compressed to
@@ -218,4 +244,8 @@ its BSD-3-Clause option; see [the database attribution and license](data/usb.ids
 and [upstream licensing](https://usb-ids.gowdy.us/). The snapshot's original header
 is retained, and the attribution/license notice is embedded as a separate RCDATA
 resource in the executable. Include `data\usb.ids.LICENSE` with any binary release
-as its third-party notice; the application needs only the executable to run.
+as its third-party notice. The Raspberry Pi assignments use BSD-3-Clause;
+see [their attribution and license](data/raspberrypi-usb-pid.LICENSE), also embedded
+as a separate RCDATA resource. Include `data\raspberrypi-usb-pid.LICENSE` alongside
+the usb.ids notice with any binary release. The application needs only the
+executable to run.
