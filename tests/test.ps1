@@ -69,7 +69,7 @@ foreach ($binary in @($exe, $fixture)) {
 }
 
 $result = Invoke-Cli $fixture @() 'empty'
-Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq "No COM ports found.`n" -and
+Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq "Found 0 ports:`n`n" -and
     $result.Stderr -eq '') 'Empty enumeration output is incorrect.'
 $result = Invoke-Cli $fixture @() 'error'
 Assert-True ($result.ExitCode -eq 1 -and $result.Stdout -eq '' -and
@@ -77,27 +77,61 @@ Assert-True ($result.ExitCode -eq 1 -and $result.Stdout -eq '' -and
 $result = Invoke-Cli $fixture @() 'output-error'
 Assert-True ($result.ExitCode -eq 1 -and $result.Stdout -eq '' -and
     $result.Stderr.Contains('Writing standard output')) 'Output errors were hidden.'
+$result = Invoke-Cli $fixture @() 'compact'
+Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+    $result.Stdout -ceq "Found 2 ports (1 bluetooth, 1 USB):`n`nCOM1   (USB) USB Serial Port`nCOM10  (BL)  Bluetooth serial port`n") `
+    'Compact output formatting, sorting, or transport is incorrect.'
+$result = Invoke-Cli $fixture @() 'suffixes'
+$expected = "Found 7 ports (7 USB):`n`nCOM1  (USB) Serial (COM2)`nCOM2  (USB) (COM2) Serial`n" +
+    "COM3  (USB) Serial (COM3) extra`nCOM4  (USB) Serial`nCOM5  (USB) `n" +
+    "COM6  (USB) Serial`nCOM7  (USB) Serial (COM77)`n"
+Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+    $result.Stdout -ceq $expected) 'Compact description suffix handling is incorrect.'
+$result = Invoke-Cli $fixture @() 'summary'
+$expected = "Found 6 ports (1 native, 2 bluetooth, 1 USB, 1 virtual, 1 unknown):`n`n" +
+    "COM3   (Native)  Unknown`nCOM5   (BL)      Unknown`nCOM7   (BL)      Unknown`n" +
+    "COM11  (USB)     Unknown`nCOM12  (Virtual) Unknown`nCOM13  (Unknown) Unknown`n"
+Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+    $result.Stdout -ceq $expected) 'Transport summary counts or spacing are incorrect.'
+$result = Invoke-Cli $fixture @() 'single'
+Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+    $result.Stdout -ceq "Found 1 port (1 native):`n`nCOM3  (Native) Unknown`n") `
+    'Single-port summary is incorrect.'
 $result = Invoke-Cli $fixture @() 'unicode'
 Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
-    $result.Stdout -match '(?s)COM2\s+Unknown.*COM10\s+USB') 'Table sorting or transport is incorrect.'
+    $result.Stdout -match '(?s)^Found 2 ports \(1 USB, 1 unknown\):\n\nCOM2\s+\(Unknown\) Unknown\nCOM10\s+\(USB\)') `
+    'Compact sorting, transport, or missing description is incorrect.'
 $unicode = "USB serial $([char]0x017d)lu$([char]0x0165)ou$([char]0x010d)k$([char]0x00fd) $([char]0x65e5)$([char]0x672c) $([char]::ConvertFromUtf32(0x1f600))"
-Assert-True ($result.Stdout.Contains($unicode)) 'Unicode was corrupted in redirected output.'
-Assert-True (-not $result.Stdout.Contains([char]0xfffd)) 'A clipped surrogate pair corrupted table output.'
+Assert-True ($result.Stdout.EndsWith("$unicode`n")) 'Unicode or suffix removal is incorrect in redirected output.'
+Assert-True (-not $result.Stdout.Contains([char]0xfffd)) 'Unicode was corrupted in compact output.'
 Assert-True (-not $result.Stdout.Contains('Instance ID')) 'Default output is unexpectedly verbose.'
+Assert-True (-not $result.Stdout.Contains('manufacturer')) 'Default output unexpectedly includes manufacturers.'
 foreach ($flag in @('--verbose', '-v')) {
+    $result = Invoke-Cli $fixture @($flag) 'empty'
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        $result.Stdout -ceq "No COM ports found.`n") 'Verbose empty output changed.'
     $result = Invoke-Cli $fixture @($flag) 'unicode'
     Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        $result.Stdout.StartsWith('PORT') -and
+        -not $result.Stdout.Contains([char]0xfffd) -and
         $result.Stdout.Contains('0403:6001') -and
         $result.Stdout -match 'USB interface\s+02' -and
         $result.Stdout.Contains('Instance ID') -and
         $result.Stdout.Contains("1234567890123456789012345$([char]::ConvertFromUtf32(0x1f600))") -and
         $result.Stdout.Contains('Example manufacturer with a long full name') -and
-        $result.Stdout.Contains($unicode)) 'Verbose metadata is incomplete.'
+        $result.Stdout.Contains("$unicode (COM10)")) 'Verbose metadata is incomplete.'
+    $result = Invoke-Cli $fixture @($flag) 'compact'
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        $result.Stdout.StartsWith('PORT') -and $result.Stdout.Contains('Bluetooth') -and
+        $result.Stdout.Contains('USB Serial Port (COM1)') -and
+        $result.Stdout.Contains('Bluetooth serial port (COM10)')) `
+        'Verbose transport names or table output changed.'
 }
 foreach ($arguments in @(@(), @('--verbose'), @('-v'))) {
     $result = Invoke-Cli $exe $arguments
+    $prefix = if ($arguments.Count -eq 0) { '^Found [0-9]+ ports?( \([^\r\n]+\))?:\n\n' } else { '^PORT' }
     Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
-        ($result.Stdout.StartsWith('PORT') -or $result.Stdout -ceq "No COM ports found.`n")) `
+        ($result.Stdout -match $prefix -or $result.Stdout -ceq "No COM ports found.`n")) `
         "Real device enumeration failed: $($result.Stderr)"
 }
 Write-Host 'CLI smoke tests passed (including synthetic empty, error, and Unicode devices).'
