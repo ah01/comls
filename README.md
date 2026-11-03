@@ -12,19 +12,28 @@ Written in C using Windows APIs, with no external runtime dependencies.
 .\build\comls.exe --help
 ```
 
-The default view shows the port, connection type, manufacturer, and description.
-Ports are sorted numerically (`COM2` before `COM10`).
+The default view shows aligned port names, connection types in parentheses, and
+descriptions, without a table header or manufacturer column. Bluetooth is abbreviated
+as `BL`; other connection types retain their names. Ports are sorted numerically
+(`COM2` before `COM10`).
+The list starts with the total number of present ports and a breakdown by connection
+type, followed by a blank line. Types with no ports are omitted; an empty list shows
+`Found 0 ports:` followed by a blank line.
+If a description ends with the same port name in parentheses, that redundant suffix
+and its surrounding whitespace are omitted from the default view. Verbose output
+preserves the original description.
 
 Illustrative output (not a scan of your computer):
 
 ```text
-PORT  TYPE       MANUFACTURER                DESCRIPTION
-COM1  Native     Example manufacturer        Communications Port (COM1)
-COM7  Bluetooth  Example manufacturer        Bluetooth serial port (COM7)
-COM10 USB        Example manufacturer        USB Serial Port (COM10)
+Found 2 ports (1 bluetooth, 1 USB):
+
+COM1   (USB) USB Serial Port
+COM10  (BL)  Bluetooth serial port
 ```
 
-`--verbose` (`-v`) adds full manufacturer and description strings, device instance
+`--verbose` (`-v`) retains the table with port, full connection type name,
+manufacturer, and description, and adds full manufacturer and description strings, device instance
 and hardware IDs, driver service/provider/version, location, parent instance, and
 USB VID/PID and interface number when available. The table limits the manufacturer
 column to 26 characters; verbose details preserve the full value. Missing metadata

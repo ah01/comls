@@ -1,8 +1,10 @@
 #include "ports.h"
 #include "output.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <wchar.h>
+#include <wctype.h>
 
 static const wchar_t help_text[] =
     L"Usage: comls [--verbose | -v] [--help | -h] [--version]\n"
@@ -18,6 +20,65 @@ static const wchar_t *field_text(const Port *port, PortField field)
 {
     const wchar_t *text = port->text[field];
     return text && *text ? text : L"Unknown";
+}
+
+static const wchar_t *compact_transport_name(Transport transport)
+{
+    return transport == TRANSPORT_BLUETOOTH ? L"BL" : transport_name(transport);
+}
+
+static size_t compact_description_length(const Port *port)
+{
+    const wchar_t *description = field_text(port, PORT_DESCRIPTION);
+    const wchar_t *name = field_text(port, PORT_NAME);
+    size_t length = wcslen(description), end = length, name_length = wcslen(name);
+    while (end && iswspace(description[end - 1]))
+        --end;
+    if (end < name_length + 2 || description[end - 1] != L')' ||
+        description[end - name_length - 2] != L'(' ||
+        _wcsnicmp(description + end - name_length - 1, name, name_length) != 0)
+        return length;
+    end -= name_length + 2;
+    while (end && iswspace(description[end - 1]))
+        --end;
+    return end;
+}
+
+static int print_summary(HANDLE stream, const PortList *list)
+{
+    struct {
+        Transport transport;
+        const wchar_t *label;
+        size_t count;
+    } types[] = {
+        { TRANSPORT_NATIVE, L"native", 0 },
+        { TRANSPORT_BLUETOOTH, L"bluetooth", 0 },
+        { TRANSPORT_USB, L"USB", 0 },
+        { TRANSPORT_VIRTUAL, L"virtual", 0 },
+        { TRANSPORT_UNKNOWN, L"unknown", 0 }
+    };
+    size_t i, type;
+    int first = 1;
+    for (i = 0; i < list->count; ++i) {
+        for (type = 0; type < ARRAYSIZE(types); ++type) {
+            if (list->items[i].transport == types[type].transport) {
+                ++types[type].count;
+                break;
+            }
+        }
+    }
+    if (!output_format(stream, L"Found %zu %ls", list->count,
+                       list->count == 1 ? L"port" : L"ports"))
+        return 0;
+    for (type = 0; type < ARRAYSIZE(types); ++type) {
+        if (!types[type].count)
+            continue;
+        if (!output_format(stream, L"%ls%zu %ls", first ? L" (" : L", ",
+                           types[type].count, types[type].label))
+            return 0;
+        first = 0;
+    }
+    return output_text(stream, first ? L":\n\n" : L"):\n\n");
 }
 
 static int print_ports(HANDLE stream, PortList *list, int verbose)
@@ -38,15 +99,39 @@ static int print_ports(HANDLE stream, PortList *list, int verbose)
         { L"USB instance", PORT_USB_DEVICE }
     };
     size_t i, field;
-    int port_width = 4;
+    int port_width = 4, type_width = 3;
+    if (!verbose && !print_summary(stream, list))
+        return 0;
     if (!list->count)
-        return output_text(stream, L"No COM ports found.\n");
+        return verbose ? output_text(stream, L"No COM ports found.\n") : 1;
     for (i = 0; i < list->count; ++i) {
         size_t length = wcslen(list->items[i].text[PORT_NAME]);
         if (length > 64)
             length = 64;
         if ((int)length > port_width)
             port_width = (int)length;
+        if (!verbose) {
+            int type_length = (int)wcslen(compact_transport_name(list->items[i].transport));
+            if (type_length > type_width)
+                type_width = type_length;
+        }
+    }
+    if (!verbose) {
+        for (i = 0; i < list->count; ++i) {
+            const Port *port = &list->items[i];
+            const wchar_t *type = compact_transport_name(port->transport);
+            size_t description_length = compact_description_length(port);
+            if (description_length > INT_MAX) {
+                SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+                return 0;
+            }
+            if (!output_format(stream, L"%-*ls  (%ls)%*ls %.*ls\n",
+                               port_width, field_text(port, PORT_NAME), type,
+                               type_width - (int)wcslen(type), L"",
+                               (int)description_length, field_text(port, PORT_DESCRIPTION)))
+                return 0;
+        }
+        return 1;
     }
     if (!output_format(stream, L"%-*ls  %-9ls  %-26ls  %ls\n",
                        port_width, L"PORT", L"TYPE", L"MANUFACTURER", L"DESCRIPTION"))
@@ -66,8 +151,6 @@ static int print_ports(HANDLE stream, PortList *list, int verbose)
                            field_text(port, PORT_DESCRIPTION)))
             return 0;
     }
-    if (!verbose)
-        return 1;
     for (i = 0; i < list->count; ++i) {
         const Port *port = &list->items[i];
         unsigned vid, pid, interface_number;
