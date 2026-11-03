@@ -7,6 +7,8 @@ Set-StrictMode -Version Latest
 $root = Split-Path $PSScriptRoot -Parent
 $exe = Join-Path $root 'build\comls.exe'
 $fixture = Join-Path $root 'build\comls_fixture.exe'
+$noIds = Join-Path $root 'build\comls_no_ids.exe'
+$badIds = Join-Path $root 'build\comls_bad_ids.exe'
 $utf8 = [System.Text.UTF8Encoding]::new($false, $true)
 
 function Assert-True([bool]$Condition, [string]$Message) {
@@ -52,7 +54,7 @@ $header = Get-Content -LiteralPath (Join-Path $root 'src\ports.h') -Raw
 $match = [regex]::Match($header, '#define COMLS_VERSION L"([^"]+)"')
 Assert-True $match.Success 'Version definition was not found.'
 $version = $match.Groups[1].Value
-foreach ($binary in @($exe, $fixture)) {
+foreach ($binary in @($exe, $fixture, $noIds, $badIds)) {
     $result = Invoke-Cli $binary @('--version')
     Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq "comls $version`n" -and
         $result.Stderr -eq '') 'Version output or exit code is incorrect.'
@@ -115,6 +117,8 @@ foreach ($flag in @('--verbose', '-v')) {
         $result.Stdout.StartsWith('PORT') -and
         -not $result.Stdout.Contains([char]0xfffd) -and
         $result.Stdout.Contains('0403:6001') -and
+        $result.Stdout -match "USB vendor\s+Example USB vendor $([char]0x65e5)$([char]::ConvertFromUtf32(0x1f600))" -and
+        $result.Stdout -match "USB product\s+Example USB product $([char]0x65e5)$([char]::ConvertFromUtf32(0x1f600))" -and
         $result.Stdout -match 'USB interface\s+02' -and
         $result.Stdout.Contains('Instance ID') -and
         $result.Stdout.Contains("1234567890123456789012345$([char]::ConvertFromUtf32(0x1f600))") -and
@@ -127,6 +131,43 @@ foreach ($flag in @('--verbose', '-v')) {
         $result.Stdout.Contains('Bluetooth serial port (COM10)')) `
         'Verbose transport names or table output changed.'
 }
+foreach ($case in @(
+    @{ Scenario = 'usb-unknown'; Vendor = 'Unknown'; Product = 'Unknown' },
+    @{ Scenario = 'usb-vendor-only'; Vendor = 'Vendor without products'; Product = 'Unknown' }
+)) {
+    $result = Invoke-Cli $fixture @('--verbose') $case.Scenario
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        $result.Stdout -match "USB vendor\s+$($case.Vendor)\n" -and
+        $result.Stdout -match "USB product\s+$($case.Product)\n" -and
+        $result.Stdout -match 'Manufacturer\s+Windows manufacturer\n' -and
+        $result.Stdout -match 'Description\s+Windows description\n') `
+        'Unknown USB IDs or Windows metadata were handled incorrectly.'
+}
+foreach ($binary in @($fixture, $noIds, $badIds)) {
+    $result = Invoke-Cli $binary @('--verbose') 'bluetooth-usb'
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        $result.Stdout.Contains('Bluetooth') -and $result.Stdout.Contains('0403:6001') -and
+        -not $result.Stdout.Contains('USB vendor') -and -not $result.Stdout.Contains('USB product')) `
+        'Bluetooth adapter incorrectly received USB database names or required the database.'
+    $result = Invoke-Cli $binary @('--verbose') 'usb-no-ids'
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        -not $result.Stdout.Contains('USB vendor')) 'Missing USB identity triggered a database lookup.'
+    foreach ($scenario in @('empty', 'single')) {
+        $result = Invoke-Cli $binary @('--verbose') $scenario
+        Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '') `
+            'Verbose output without USB identities required the database.'
+    }
+    $result = Invoke-Cli $binary @() 'unicode'
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        -not $result.Stdout.Contains('USB vendor') -and -not $result.Stdout.Contains('USB product')) `
+        'Compact output required or displayed database names.'
+}
+foreach ($binary in @($noIds, $badIds)) {
+    $result = Invoke-Cli $binary @('--verbose') 'unicode'
+    Assert-True ($result.ExitCode -eq 1 -and $result.Stdout -eq '' -and
+        $result.Stderr.Contains('Loading embedded USB database')) `
+        'Missing or corrupt USB resource was not reported before output.'
+}
 foreach ($arguments in @(@(), @('--verbose'), @('-v'))) {
     $result = Invoke-Cli $exe $arguments
     $prefix = if ($arguments.Count -eq 0) { '^Found [0-9]+ ports?( \([^\r\n]+\))?:\n\n' } else { '^PORT' }
@@ -134,4 +175,18 @@ foreach ($arguments in @(@(), @('--verbose'), @('-v'))) {
         ($result.Stdout -match $prefix -or $result.Stdout -ceq "No COM ports found.`n")) `
         "Real device enumeration failed: $($result.Stderr)"
 }
-Write-Host 'CLI smoke tests passed (including synthetic empty, error, and Unicode devices).'
+$standalone = Join-Path $root "build\standalone-$([Guid]::NewGuid().ToString('N'))"
+New-Item -ItemType Directory -Path $standalone -Force | Out-Null
+$copiedExe = Join-Path $standalone 'comls.exe'
+Copy-Item -LiteralPath $exe -Destination $copiedExe -Force
+Push-Location $standalone
+try {
+    $result = Invoke-Cli $copiedExe @('--verbose')
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '') `
+        'Standalone copied executable failed without external database files.'
+} finally {
+    Pop-Location
+    Remove-Item -LiteralPath $copiedExe
+    Remove-Item -LiteralPath $standalone
+}
+Write-Host 'CLI smoke tests passed (including USB enrichment, resource errors, and standalone execution).'

@@ -1,5 +1,6 @@
 #include "ports.h"
 #include "output.h"
+#include "usb_ids.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -20,6 +21,33 @@ static const wchar_t *field_text(const Port *port, PortField field)
 {
     const wchar_t *text = port->text[field];
     return text && *text ? text : L"Unknown";
+}
+
+static int add_usb_names(PortList *list)
+{
+    UsbIds ids = {0};
+    int loaded = 0;
+    size_t i;
+    for (i = 0; i < list->count; ++i) {
+        Port *port = &list->items[i];
+        unsigned vid, pid;
+        if (port->transport != TRANSPORT_USB ||
+            !usb_identifiers(port->text[PORT_USB_DEVICE], &vid, &pid))
+            continue;
+        if (!loaded) {
+            if (!usb_ids_load(&ids)) {
+                report_error(L"Loading embedded USB database", GetLastError());
+                return 0;
+            }
+            loaded = 1;
+        }
+        if (!usb_ids_lookup(&ids, vid, pid, &port->text[PORT_USB_VENDOR],
+                            &port->text[PORT_USB_PRODUCT])) {
+            report_error(L"Looking up USB names", GetLastError());
+            return 0;
+        }
+    }
+    return 1;
 }
 
 static const wchar_t *compact_transport_name(Transport transport)
@@ -166,6 +194,12 @@ static int print_ports(HANDLE stream, PortList *list, int verbose)
         if (usb_identifiers(port->text[PORT_USB_DEVICE], &vid, &pid)) {
             if (!output_format(stream, L"  %-16ls %04X:%04X\n", L"USB VID:PID", vid, pid))
                 return 0;
+            if (port->transport == TRANSPORT_USB &&
+                (!output_format(stream, L"  %-16ls %ls\n", L"USB vendor",
+                                field_text(port, PORT_USB_VENDOR)) ||
+                 !output_format(stream, L"  %-16ls %ls\n", L"USB product",
+                                field_text(port, PORT_USB_PRODUCT))))
+                return 0;
             if (usb_interface(port->text[PORT_USB_DEVICE], &interface_number) &&
                 !output_format(stream, L"  %-16ls %02X\n", L"USB interface", interface_number))
                 return 0;
@@ -197,7 +231,7 @@ int wmain(int argc, wchar_t **argv)
     else if (version)
         printed = output_text(stream, L"comls " COMLS_VERSION L"\n");
     else {
-        if (!port_list_load(&list)) {
+        if (!port_list_load(&list) || (verbose && !add_usb_names(&list))) {
             port_list_clear(&list);
             return 1;
         }

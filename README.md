@@ -39,6 +39,14 @@ USB VID/PID and interface number when available. The table limits the manufactur
 column to 26 characters; verbose details preserve the full value. Missing metadata
 is shown as `Unknown`.
 
+For ports classified as `USB`, verbose details also include `USB vendor` and
+`USB product`, resolved from the embedded USB ID Repository snapshot using the
+displayed VID/PID. These are separate from the Windows-reported manufacturer
+and description, which are preserved. An unlisted ID is `Unknown`; a listed
+vendor is still shown when the product is unlisted. A missing or corrupt embedded
+database is an error (exit code `1`) when a verbose USB lookup is needed.
+The lookup never accesses the network or opens a device.
+
 `--help` (`-h`) and `--version` do not enumerate devices.
 
 | Exit code | Meaning |
@@ -72,6 +80,9 @@ pwsh -NoProfile -File .\build.ps1 -Test
 ```
 
 The script locates MSVC using `vswhere` and initializes its x64 environment.
+It converts the committed `data\usb.ids` into an indexed binary and uses the
+Windows SDK resource compiler (`rc.exe`) to embed it in the executable.
+Normal builds do not download data and work offline.
 It works from a regular terminal; a Developer Command Prompt is not required.
 `build\comls.exe` is the standalone Release executable. Copy that file to a directory
 on your `PATH` to invoke it as `comls`. PowerShell and the compiler are build/test
@@ -81,16 +92,19 @@ The Release build optimizes for size, removes unused code, and statically links 
 C runtime (`/MT`), so the Visual C++ Redistributable is not required. The build prints
 the actual executable size; size and runtime vary with compiler and hardware.
 
-Reference measurement on Windows 11 x64 (build 26200), MSVC toolset 14.51.36231
-and Windows SDK 10.0.26100.0: **149,504 bytes (146 KiB)**. Ten consecutive scans of
-four present ports averaged **43 ms** (34-60 ms), including process startup and
-capturing stdout. These are local observations, not size or performance guarantees.
+The uncompressed database increases executable size. A local build with the
+2026.06.26 snapshot measured **906,752 bytes (about 886 KiB)**, compared with the
+previous database-free reference of 149,504 bytes. These are local observations,
+not size guarantees; the build prints the actual size.
 
 `-Test` builds and runs C unit tests and PowerShell CLI smoke tests. Synthetic
 fixtures cover empty/error discovery and Unicode metadata without modifying or
 opening real devices. Unit tests cover port validation, sorting, merging, transport
 classification, USB identifier parsing, Unicode console output, exact UTF-8 bytes,
-and output errors. CLI smoke tests also enumerate local
+and output errors. USB tests cover deterministic conversion, source validation,
+failed-update preservation, binary validation, scoped vendor/product lookup,
+Unicode names, USB-only verbose enrichment, missing/corrupt resources, and
+standalone execution without external data files. CLI smoke tests also enumerate local
 devices, but do not require a particular port or attached hardware.
 
 GitHub Actions runs the same build and tests on Windows for pushes and pull requests.
@@ -118,7 +132,12 @@ recognized. The manufacturer is the driver-reported value, not necessarily the
 manufacturer of the final product.
 
 For Bluetooth ports backed by a USB radio, verbose USB details describe that radio,
-not the remote Bluetooth device. The connection type remains `Bluetooth`.
+not the remote Bluetooth device. The connection type remains `Bluetooth`, and
+database vendor/product names are not added for these ports.
+
+USB database names identify the registered VID/PID, not necessarily the final
+marketed device: they may describe a chipset, bridge, or generic product family.
+They do not change transport classification or verify device authenticity.
 
 comls does not infer a USB serial number from the trailing instance ID, which can
 instead be a Windows-generated location identifier. USB instance IDs are available
@@ -139,6 +158,37 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development and
 [SECURITY.md](SECURITY.md) for security reporting. Repository source, comments,
 documentation, and other authored text are in English.
 
+## Updating the USB database
+
+The complete upstream snapshot is committed as `data\usb.ids`. To update it:
+
+```powershell
+pwsh -NoProfile -File .\scripts\update-usb-ids.ps1
+pwsh -NoProfile -File .\build.ps1 -Test
+```
+
+The update script explicitly downloads https://usb-ids.gowdy.us/usb.ids over HTTPS
+with a timeout and no redirects. It validates vendor/product syntax, UTF-8 names,
+and unique IDs before replacing the old snapshot. A failed download or validation
+leaves the old file unchanged. Review and commit the resulting diff; rebuilding
+is required to update the names in an existing executable.
+
+The build-time converter is `scripts\convert-usb-ids.ps1`; generated binaries and
+resources stay under ignored `build\`. It includes all vendors/products, ignoring
+USB interface names, classes, and the remaining non-device sections (which can
+contain legacy-encoded text). Runtime lookup uses sorted vendor/product indexes,
+binary search, and an uncompressed UTF-8 string pool. Format version 1 uses
+little-endian 32-bit integers: a 32-byte header (`CUSBIDS\0`, version, vendor count,
+product count, string-pool offset, string-pool size, reserved zero), 16-byte vendor
+records (VID, relative name offset, first product index, product count), 8-byte
+product records (PID, relative name offset), and NUL-terminated strings. Product
+ranges are contiguous and sorted within each sorted vendor.
+
 ## License
 
-[MIT](LICENSE).
+comls code is [MIT](LICENSE). The USB ID Repository database is distributed using
+its BSD-3-Clause option; see [the database attribution and license](data/usb.ids.LICENSE)
+and [upstream licensing](https://usb-ids.gowdy.us/). The snapshot's original header
+is retained, and the attribution/license notice is embedded as a separate RCDATA
+resource in the executable. Include `data\usb.ids.LICENSE` with any binary release
+as its third-party notice; the application needs only the executable to run.

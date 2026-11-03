@@ -1,0 +1,7 @@
+#ifndef COMLS_RESOURCE_H
+#define COMLS_RESOURCE_H
+
+#define IDR_USB_IDS 101
+#define IDR_USB_IDS_NOTICE 102
+
+#endif
