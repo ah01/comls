@@ -4,7 +4,9 @@
 #include <stddef.h>
 #include <wchar.h>
 
+#ifndef COMLS_VERSION
 #define COMLS_VERSION L"0.1.0"
+#endif
 
 typedef enum {
     PORT_NAME,

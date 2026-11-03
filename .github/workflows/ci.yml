@@ -3,17 +3,117 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing Alpha tag to promote to stable (vX.Y.Z)
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   windows:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Calculate main release version
+        id: version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          . .\scripts\release-version.ps1
+          $release = Get-ReleaseVersion $PWD.Path $env:SOURCE_COMMIT
+          "version=$($release.Version)" >> $env:GITHUB_OUTPUT
       - name: Build and test x64 Release
         shell: pwsh
-        run: .\build.ps1 -Test
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ($env:RELEASE_VERSION) {
+            .\build.ps1 -Test -Version $env:RELEASE_VERSION
+          } else {
+            .\build.ps1 -Test
+          }
+      - name: Transfer tested executable
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-executable
+          path: build\comls.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: windows
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: release-mutations
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Check out tested source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download tested executable
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-executable
+          path: build
+      - name: Publish Alpha prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          RELEASE_VERSION: ${{ needs.windows.outputs.version }}
+        run: .\scripts\release.ps1 -Mode Publish -Commit $env:SOURCE_COMMIT -ExpectedVersion $env:RELEASE_VERSION
+
+  promote:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: release-mutations
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Require main workflow
+        shell: pwsh
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+        run: |
+          if ($env:WORKFLOW_REF -cne 'refs/heads/main') {
+            throw 'Dispatch this workflow from main to promote a release.'
+          }
+      - name: Check out main and release tags
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Promote existing Alpha without rebuilding
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: .\scripts\release.ps1 -Mode Promote -Tag $env:RELEASE_TAG
