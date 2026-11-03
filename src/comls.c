@@ -76,6 +76,36 @@ static size_t compact_description_length(const Port *port)
     return end;
 }
 
+static const wchar_t *compact_detail(const Port *port, PortField field)
+{
+    const wchar_t *text = port->text[field];
+    return text && *text && _wcsicmp(text, L"Unknown") != 0 ? text : NULL;
+}
+
+static int print_compact_details(HANDLE stream, const Port *port)
+{
+    const wchar_t *manufacturer = compact_detail(port, PORT_MANUFACTURER);
+    const wchar_t *vendor = NULL, *product = NULL;
+    if (manufacturer && _wcsicmp(manufacturer, L"Microsoft") == 0)
+        manufacturer = NULL;
+    if (port->transport == TRANSPORT_USB) {
+        vendor = compact_detail(port, PORT_USB_VENDOR);
+        product = compact_detail(port, PORT_USB_PRODUCT);
+    }
+    if (!manufacturer && !vendor && !product)
+        return 1;
+    if (!output_text(stream, L" ["))
+        return 0;
+    if (manufacturer && !output_text(stream, manufacturer))
+        return 0;
+    if ((vendor || product) &&
+        !output_format(stream, L"%lsUSB: %ls%ls%ls",
+                       manufacturer ? L", " : L"", vendor ? vendor : L"",
+                       vendor && product ? L" / " : L"", product ? product : L""))
+        return 0;
+    return output_text(stream, L"]");
+}
+
 static int print_summary(HANDLE stream, const PortList *list)
 {
     struct {
@@ -157,10 +187,14 @@ static int print_ports(HANDLE stream, PortList *list, int verbose)
                 SetLastError(ERROR_NOT_ENOUGH_MEMORY);
                 return 0;
             }
-            if (!output_format(stream, L"%-*ls  (%ls)%*ls %.*ls\n",
+            if (!output_format(stream, L"%-*ls  (%ls)%*ls %.*ls",
                                port_width, field_text(port, PORT_NAME), type,
                                type_width - (int)wcslen(type), L"",
                                (int)description_length, field_text(port, PORT_DESCRIPTION)))
+                return 0;
+            if (!print_compact_details(stream, port))
+                return 0;
+            if (!output_text(stream, L"\n"))
                 return 0;
         }
         return 1;
@@ -236,7 +270,7 @@ int wmain(int argc, wchar_t **argv)
         printed = output_text(stream, L"comls " COMLS_VERSION
                               L"\nusb.ids " COMLS_USB_IDS_DATE L"\n");
     else {
-        if (!port_list_load(&list) || (verbose && !add_usb_names(&list))) {
+        if (!port_list_load(&list) || !add_usb_names(&list)) {
             port_list_clear(&list);
             return 1;
         }

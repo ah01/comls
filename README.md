@@ -13,7 +13,13 @@ Written in C using Windows APIs, with no external runtime dependencies.
 ```
 
 The default view shows aligned port names, connection types in parentheses, and
-descriptions, without a table header or manufacturer column. Bluetooth is abbreviated
+descriptions, without a table header. Optional details follow the description as
+`[Manufacturer, USB: vendor / product]`, using the Windows-reported manufacturer
+and, for USB ports only, names from the embedded `usb.ids` database.
+The manufacturer `Microsoft` (case-insensitive) and missing or `Unknown` detail
+values are omitted. If only one USB name is known, it is shown without a slash;
+if no details remain, the square brackets are omitted. Values are not truncated.
+A missing description is still shown as `Unknown`. Bluetooth is abbreviated
 as `BL`; other connection types retain their names. Ports are sorted numerically
 (`COM2` before `COM10`).
 The list starts with the total number of present ports and a breakdown by connection
@@ -28,7 +34,7 @@ Illustrative output (not a scan of your computer):
 ```text
 Found 2 ports (1 bluetooth, 1 USB):
 
-COM1   (USB) USB Serial Port
+COM1   (USB) USB Serial Port [FTDI, USB: Future Technology Devices International, Ltd / FT232 Serial (UART) IC]
 COM10  (BL)  Bluetooth serial port
 ```
 
@@ -39,16 +45,18 @@ USB VID/PID and interface number when available. The table limits the manufactur
 column to 26 characters; verbose details preserve the full value. Missing metadata
 is shown as `Unknown`.
 
-For ports classified as `USB`, verbose details also include `USB vendor` and
+For ports classified as `USB`, both views include the vendor and product names.
+Verbose details label these as `USB vendor` and
 `USB product`, resolved from the embedded USB ID Repository snapshot using the
 displayed VID/PID. These are separate from the Windows-reported manufacturer
-and description, which are preserved. An unlisted ID is `Unknown`; a listed
+and description, which are preserved. An unlisted ID is `Unknown` in verbose
+output and omitted from the default view; a listed
 vendor is still shown when the product is unlisted. A missing or corrupt embedded
-database is an error (exit code `1`) when a verbose USB lookup is needed.
+database is an error (exit code `1`) when a USB lookup is needed, in either view.
 The lookup never accesses the network or opens a device. The database is
 MSZIP-compressed in the executable and decompressed once before the first
-verbose USB lookup. Its memory is released after resolving the names; compact
-output, help/version, and scans without USB lookups do not decompress it.
+USB lookup. Its memory is released after resolving the names; help/version
+and scans without USB lookups do not decompress it.
 
 `--help` (`-h`) and `--version` do not enumerate devices.
 `--version` also shows the embedded database's upstream snapshot date:
@@ -109,7 +117,7 @@ the actual executable size; size and runtime vary with compiler and hardware.
 
 A local build with the 2026.06.26 snapshot measured **441,344 bytes (431 KiB)**,
 compared with 906,752 bytes (about 886 KiB) with the uncompressed database.
-The 750,443-byte indexed database compresses to 285,180 bytes. A verbose USB
+The 750,443-byte indexed database compresses to 285,180 bytes. A USB
 lookup temporarily needs about 733 KiB for the decompressed data. Compression
 and decompression use the system `cabinet.dll`, available on the supported
 Windows versions; no additional DLL is distributed.
@@ -123,7 +131,7 @@ classification, USB identifier parsing, Unicode console output, exact UTF-8 byte
 and output errors. USB tests cover deterministic conversion, source validation,
 failed-update preservation, deterministic MSZIP compression, decompression size
 limits and cleanup, corrupt/truncated streams, binary validation, scoped vendor/product lookup,
-Unicode names, USB-only verbose enrichment, missing/corrupt resources, and
+Unicode names, USB-only enrichment in both views, missing/corrupt resources, and
 standalone execution without external data files. CLI smoke tests also enumerate local
 devices, but do not require a particular port or attached hardware.
 
