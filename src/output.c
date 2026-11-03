@@ -90,6 +90,9 @@ static int output_color_text(HANDLE stream, OutputColor color, const wchar_t *te
     case OUTPUT_GRAY:
         foreground = FOREGROUND_INTENSITY;
         break;
+    case OUTPUT_AQUA:
+        foreground = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        break;
     default:
         SetLastError(ERROR_INVALID_PARAMETER);
         return 0;

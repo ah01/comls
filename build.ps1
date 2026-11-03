@@ -53,9 +53,9 @@ if ($Test) {
     $commands += 'rc /nologo /fo build\bad_usb_ids.res tests\bad_usb_ids.rc'
     $commands += "cl $flags /Fobuild\ /Febuild\test_usb_ids.exe tests\test_usb_ids.c src\usb_ids.c build\test_usb_ids.res $link cabinet.lib"
     $fixtureSources = 'src\comls.c src\ports.c src\output.c src\usb_ids.c tests\fixture.c'
-    $commands += "cl $flags /Fobuild\ /Febuild\comls_fixture.exe $fixtureSources build\test_usb_ids.res $link cabinet.lib"
-    $commands += "cl $flags /Fobuild\ /Febuild\comls_no_ids.exe $fixtureSources $link cabinet.lib"
-    $commands += "cl $flags /Fobuild\ /Febuild\comls_bad_ids.exe $fixtureSources build\bad_usb_ids.res $link cabinet.lib"
+    $commands += "cl $flags /DCOMLS_TEST_FIXTURE /Fobuild\ /Febuild\comls_fixture.exe $fixtureSources build\test_usb_ids.res $link cabinet.lib"
+    $commands += "cl $flags /DCOMLS_TEST_FIXTURE /Fobuild\ /Febuild\comls_no_ids.exe $fixtureSources $link cabinet.lib"
+    $commands += "cl $flags /DCOMLS_TEST_FIXTURE /Fobuild\ /Febuild\comls_bad_ids.exe $fixtureSources build\bad_usb_ids.res $link cabinet.lib"
 }
 & $env:ComSpec /d /s /c ($commands -join ' && ')
 if ($LASTEXITCODE -ne 0) {

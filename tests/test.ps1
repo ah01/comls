@@ -72,11 +72,13 @@ foreach ($binary in @($exe, $fixture, $noIds, $badIds)) {
         $result = Invoke-Cli $binary @($flag)
         Assert-True ($result.ExitCode -eq 0 -and $result.Stdout.Contains('--version') -and
             $result.Stdout.Contains('--usb-only') -and
+            $result.Stdout.Contains('--sort-by-time') -and
             $result.Stdout.Contains('-d') -and $result.Stdout.Contains('-vv') -and
             $result.Stderr -eq '') 'Help output is incorrect or triggered discovery.'
     }
     foreach ($arguments in @(@('--bad'), @('COM1'), @('--version', '--bad'), @('-u', '--bad'),
-        @('-vvv'), @('-d', '--bad'), @('-vv', '--bad'))) {
+        @('-vvv'), @('-d', '--bad'), @('-vv', '--bad'), @('-t', '--bad'),
+        @('--sort-by-time', '--bad'), @('-tt'))) {
         $result = Invoke-Cli $binary $arguments
         Assert-True ($result.ExitCode -eq 2 -and $result.Stdout -eq '' -and
             $result.Stderr.Contains('Invalid argument')) 'Invalid arguments were not rejected.'
@@ -196,6 +198,153 @@ Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
     $result.Stdout -match 'Manufacturer:\s+Unknown\n') `
     'Compact metadata filtering changed verbose output.'
 $verboseOutputs = @{}
+foreach ($scenario in @('arrivals', 'all-recent', 'old-arrivals')) {
+    $result = Invoke-Cli $fixture @() $scenario
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        -not $result.Stdout.Contains([char]27)) 'Arrival compact output failed or contains escapes.'
+    $rows = @([regex]::Matches($result.Stdout, '(?m)^COM\d+.*$') |
+        ForEach-Object { $_.Value })
+    $names = @($rows | ForEach-Object { ($_ -split '\s+')[0] })
+    $recentNames = 'COM2,COM5,COM6,COM7,COM8,COM10'
+    $restNames = 'COM1,COM3,COM4,COM9,COM11,COM12,COM13,COM14,COM15,COM16'
+    $expectedNames = switch ($scenario) {
+        'arrivals' { "$recentNames,$restNames" }
+        'all-recent' { $recentNames }
+        'old-arrivals' { $restNames }
+    }
+    Assert-True (($names -join ',') -ceq $expectedNames) 'Recent partition lost ports or numeric ordering.'
+    Assert-True ($result.Stdout.Contains('Recent (last 5 minutes):') -eq
+        ($scenario -ne 'old-arrivals')) 'Recent heading visibility is incorrect.'
+    Assert-True ($result.Stdout.Contains("`n`nRest:`n") -eq ($scenario -eq 'arrivals')) `
+        'Rest heading visibility or separation is incorrect.'
+    foreach ($row in $rows) {
+        $descriptionColumn = if ($scenario -eq 'all-recent') { 13 } else { 17 }
+        Assert-True ($row.IndexOf('(') -eq 7 -and $row.IndexOf('Serial') -eq $descriptionColumn) `
+            'Grouped compact columns are not aligned across sections.'
+    }
+    if ($scenario -eq 'arrivals') {
+        Assert-True ($result.Stdout.StartsWith(
+            "Found 16 ports (8 native, 1 bluetooth, 6 USB, 1 unknown):`n`nRecent (last 5 minutes):`n")) `
+            'Grouped output changed summary counts or layout.'
+        $sections = $result.Stdout -split "`n`nRest:`n"
+        Assert-True ((@([regex]::Matches($sections[0], '(?m)^COM\d+') |
+            ForEach-Object { $_.Value }) -join ',') -ceq $recentNames) `
+            'Recent contains old, unknown, or future timestamps.'
+    }
+}
+foreach ($flag in @('-u', '--usb-only')) {
+    $result = Invoke-Cli $fixture @($flag) 'arrivals'
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        $result.Stdout -ceq ("Found 6 ports (6 USB):`n`nRecent (last 5 minutes):`n" +
+            "COM2   (USB) Serial +5 min`nCOM6   (USB) Serial +2 min`nCOM7   (USB) Serial +1 min`n" +
+            "COM8   (USB) Serial +1 s`nCOM10  (USB) Serial +1 min`n`nRest:`nCOM4   (USB) Serial -1 min`n")) `
+        'USB filtering, grouping, counts, or column widths are incorrect.'
+}
+$reference = [datetime]::new(2026, 1, 15, 12, 0, 0, [DateTimeKind]::Utc)
+$arrivalCases = @(
+    @{ Name = 'COM1'; Age = 301; Relative = '5 minutes ago' },
+    @{ Name = 'COM2'; Age = 300; Relative = '5 minutes ago' },
+    @{ Name = 'COM4'; Age = -60; Relative = 'in 1 minute' },
+    @{ Name = 'COM5'; Age = 0; Relative = 'just now' },
+    @{ Name = 'COM6'; Age = 120; Relative = '2 minutes ago' },
+    @{ Name = 'COM7'; Age = 60; Relative = '1 minute ago' },
+    @{ Name = 'COM8'; Age = 1; Relative = '1 second ago' },
+    @{ Name = 'COM9'; Age = 3600; Relative = '1 hour ago' },
+    @{ Name = 'COM10'; Age = 60; Relative = '1 minute ago' },
+    @{ Name = 'COM11'; Age = 86400; Relative = '1 day ago' },
+    @{ Name = 'COM12'; Age = 172800; Relative = '2 days ago' },
+    @{ Name = 'COM13'; Age = 7200; Relative = '2 hours ago' },
+    @{ Name = 'COM14'; Age = -7200; Relative = 'in 2 hours' },
+    @{ Name = 'COM15'; Age = (184 * 86400); Relative = '184 days ago' },
+    @{ Name = 'COM16'; Age = 0; Relative = 'in less than a second' }
+)
+$compact = Invoke-Cli $fixture @() 'arrivals'
+foreach ($case in $arrivalCases) {
+    $age = switch -Regex ($case.Relative) {
+        '^(\d+) seconds? ago$' { "+$($Matches[1]) s"; break }
+        '^(\d+) minutes? ago$' { "+$($Matches[1]) min"; break }
+        '^(\d+) hours? ago$' { "+$($Matches[1]) h"; break }
+        '^(\d+) days? ago$' { "+$($Matches[1]) d"; break }
+        '^in (\d+) minutes?$' { "-$($Matches[1]) min"; break }
+        '^in (\d+) hours?$' { "-$($Matches[1]) h"; break }
+        '^in less than a second$' { '-0 s'; break }
+        '^just now$' { '+0 s'; break }
+    }
+    Assert-True ($compact.Stdout -match
+        "(?m)^$($case.Name)\s+.* $([regex]::Escape($age))$") `
+        "Compact arrival age is missing or incorrect for $($case.Name)."
+}
+Assert-True ($compact.Stdout -match '(?m)^COM3\s+\(Unknown\) Serial$') `
+    'Unknown compact arrival age was not omitted.'
+foreach ($sortFlag in @('-t', '--sort-by-time')) {
+    foreach ($detailFlags in @(@(), @('-v'), @('-d'), @('-vv'))) {
+        $sorted = Invoke-Cli $fixture (@($sortFlag) + $detailFlags) 'arrivals'
+        $names = @([regex]::Matches($sorted.Stdout, '(?m)^COM\d+') |
+            ForEach-Object { $_.Value })
+        $expected = if ($detailFlags.Count) {
+            'COM14,COM4,COM16,COM5,COM8,COM7,COM10,COM6,COM2,COM1,COM9,COM13,COM11,COM12,COM15,COM3'
+        } else {
+            'COM5,COM8,COM7,COM10,COM6,COM2,COM14,COM4,COM16,COM1,COM9,COM13,COM11,COM12,COM15,COM3'
+        }
+        Assert-True ($sorted.ExitCode -eq 0 -and $sorted.Stderr -eq '' -and
+            ($names -join ',') -ceq $expected) 'Time sorting or arrival-time tie breaking is incorrect.'
+        $filtered = Invoke-Cli $fixture (@($sortFlag, '-u') + $detailFlags) 'arrivals'
+        $names = @([regex]::Matches($filtered.Stdout, '(?m)^COM\d+') |
+            ForEach-Object { $_.Value })
+        $expected = if ($detailFlags.Count) { 'COM4,COM8,COM7,COM10,COM6,COM2' } else {
+            'COM8,COM7,COM10,COM6,COM2,COM4'
+        }
+        Assert-True ($filtered.ExitCode -eq 0 -and $filtered.Stderr -eq '' -and
+            ($names -join ',') -ceq $expected) 'USB time sorting is incorrect.'
+    }
+    foreach ($scenario in @('empty', 'single', 'compact')) {
+        $normal = Invoke-Cli $fixture @() $scenario
+        $sorted = Invoke-Cli $fixture @($sortFlag, $sortFlag) $scenario
+        Assert-True ($sorted.ExitCode -eq 0 -and $sorted.Stderr -eq '' -and
+            $sorted.Stdout -ceq $normal.Stdout) 'Unknown arrival sorting or repeated time flags changed output.'
+    }
+    foreach ($infoFlag in @('--help', '--version')) {
+        $result = Invoke-Cli $fixture @($sortFlag, $infoFlag) 'error'
+        Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '') `
+            'Time sorting triggered discovery with help/version.'
+    }
+}
+foreach ($flag in @('-v', '--verbose', '-d', '-vv')) {
+    $result = Invoke-Cli $fixture @($flag) 'arrivals'
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stderr -eq '' -and
+        -not $result.Stdout.Contains('Recent (') -and -not $result.Stdout.Contains('Rest:')) `
+        'Verbose arrival output failed or was grouped.'
+    $blocks = @{}
+    foreach ($block in ($result.Stdout -split "`n`n")) {
+        if ($block -match '^(COM\d+)\n') { $blocks[$Matches[1]] = $block }
+    }
+    Assert-True (($blocks.Keys.Count -eq 16) -and
+        $blocks['COM3'].Contains('Last arrival:    Unknown')) 'Missing arrival is not Unknown.'
+    foreach ($case in $arrivalCases) {
+        $utc = $reference.AddSeconds(-$case.Age)
+        $local = [TimeZoneInfo]::ConvertTimeFromUtc($utc, [TimeZoneInfo]::Local)
+        $absolute = $local.ToString('yyyy-MM-dd HH:mm:ss',
+            [Globalization.CultureInfo]::InvariantCulture)
+        $expected = "  Last arrival:    $absolute ($($case.Relative))`n"
+        Assert-True ($blocks[$case.Name].Contains($expected)) `
+            "Incorrect local time or relative age for $($case.Name) with $flag."
+    }
+    $headings = @([regex]::Matches($result.Stdout, '(?m)^COM\d+$') |
+        ForEach-Object { $_.Value })
+    Assert-True (($headings -join ',') -ceq
+        'COM1,COM2,COM3,COM4,COM5,COM6,COM7,COM8,COM9,COM10,COM11,COM12,COM13,COM14,COM15,COM16') `
+        'Verbose arrival details changed numeric ordering.'
+    $filtered = Invoke-Cli $fixture @($flag, '-u') 'arrivals'
+    Assert-True ($filtered.ExitCode -eq 0 -and $filtered.Stderr -eq '' -and
+        ([regex]::Matches($filtered.Stdout, '(?m)^  Last arrival:').Count -eq 6) -and
+        -not $filtered.Stdout.Contains('Recent (')) 'USB-only verbose arrivals are incorrect.'
+    $invalid = Invoke-Cli $fixture @($flag) 'invalid-arrival'
+    Assert-True ($invalid.ExitCode -eq 1 -and
+        $invalid.Stderr.Contains('Writing standard output')) 'Timestamp conversion failure was hidden.'
+    $seconds = Invoke-Cli $fixture @($flag) 'relative-seconds'
+    Assert-True ($seconds.ExitCode -eq 0 -and $seconds.Stderr -eq '' -and
+        $seconds.Stdout.Contains('(59 seconds ago)')) 'Plural relative seconds are incorrect.'
+}
 $fullOnlyLabels = @('Instance ID', 'Hardware IDs', 'Driver version', 'Location',
     'USB instance', 'Driver provider', 'Service', 'Parent instance')
 foreach ($flag in @('--verbose', '-v', '-d', '-vv')) {

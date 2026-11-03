@@ -109,6 +109,79 @@ static void check_transports(void)
     CHECK(wcscmp(transport_name(TRANSPORT_BLUETOOTH), L"Bluetooth") == 0);
 }
 
+static void check_arrivals(void)
+{
+    const uint64_t now = UINT64_C(10000000000);
+    PortList list = {0};
+    Port port = {0};
+    CHECK(!port_is_recent(&port, now));
+    port.has_last_arrival = 1;
+    port.last_arrival = now;
+    CHECK(port_is_recent(&port, now));
+    port.last_arrival = now - UINT64_C(3000000000);
+    CHECK(port_is_recent(&port, now));
+    --port.last_arrival;
+    CHECK(!port_is_recent(&port, now));
+    port.last_arrival = now + 1;
+    CHECK(!port_is_recent(&port, now));
+    port.last_arrival = UINT64_MAX;
+    CHECK(!port_is_recent(&port, now));
+    port.last_arrival = 0;
+    CHECK(port_is_recent(&port, 0));
+    port_clear(&port);
+    CHECK(!port.has_last_arrival && port.last_arrival == 0);
+    CHECK(port_set(&port, PORT_NAME, L"COM1"));
+    CHECK(port_list_add(&list, &port));
+    CHECK(port_set(&port, PORT_NAME, L"com1"));
+    port.has_last_arrival = 1;
+    port.last_arrival = now;
+    CHECK(port_list_add(&list, &port));
+    CHECK(!port.has_last_arrival && port.last_arrival == 0);
+    CHECK(list.items[0].has_last_arrival && list.items[0].last_arrival == now);
+    CHECK(port_set(&port, PORT_NAME, L"COM1"));
+    CHECK(port_list_add(&list, &port));
+    CHECK(list.items[0].has_last_arrival && list.items[0].last_arrival == now);
+    CHECK(port_set(&port, PORT_NAME, L"COM1"));
+    port.has_last_arrival = 1;
+    port.last_arrival = now - 1;
+    CHECK(port_list_add(&list, &port));
+    CHECK(list.items[0].last_arrival == now);
+    CHECK(port_set(&port, PORT_NAME, L"COM2"));
+    port.has_last_arrival = 1;
+    port.last_arrival = now;
+    CHECK(port_list_add(&list, &port));
+    port_list_sort(&list);
+    CHECK(list.items[1].has_last_arrival && list.items[1].last_arrival == now);
+    CHECK(port_set(&port, PORT_NAME, L"COM20"));
+    CHECK(port_list_add(&list, &port));
+    CHECK(port_set(&port, PORT_NAME, L"COM3"));
+    CHECK(port_list_add(&list, &port));
+    CHECK(port_set(&port, PORT_NAME, L"COM4"));
+    port.has_last_arrival = 1;
+    port.last_arrival = now - 1;
+    CHECK(port_list_add(&list, &port));
+    CHECK(port_set(&port, PORT_NAME, L"COM10"));
+    port.has_last_arrival = 1;
+    port.last_arrival = now + 1;
+    CHECK(port_list_add(&list, &port));
+    CHECK(port_set(&port, PORT_NAME, L"COM6"));
+    port.has_last_arrival = 1;
+    port.last_arrival = 0;
+    CHECK(port_list_add(&list, &port));
+    port_list_sort_by_time(&list);
+    CHECK(wcscmp(list.items[0].text[PORT_NAME], L"COM10") == 0);
+    CHECK(wcscmp(list.items[1].text[PORT_NAME], L"COM1") == 0);
+    CHECK(wcscmp(list.items[2].text[PORT_NAME], L"COM2") == 0);
+    CHECK(wcscmp(list.items[3].text[PORT_NAME], L"COM4") == 0);
+    CHECK(wcscmp(list.items[4].text[PORT_NAME], L"COM6") == 0);
+    CHECK(wcscmp(list.items[5].text[PORT_NAME], L"COM3") == 0);
+    CHECK(wcscmp(list.items[6].text[PORT_NAME], L"COM20") == 0);
+    port_list_sort_by_time(&list);
+    CHECK(wcscmp(list.items[0].text[PORT_NAME], L"COM10") == 0);
+    port_list_clear(&list);
+    port_list_sort_by_time(&list);
+}
+
 static void check_usb(void)
 {
     unsigned vid = 0, pid = 0, number = 0;
@@ -134,6 +207,7 @@ int main(void)
     check_names();
     check_list();
     check_transports();
+    check_arrivals();
     check_usb();
     puts("Port unit tests passed.");
     return 0;

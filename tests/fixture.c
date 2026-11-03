@@ -1,6 +1,21 @@
 #include "ports.h"
 #include "output.h"
 
+uint64_t fixture_reference_time(void)
+{
+    SYSTEMTIME utc = {0};
+    FILETIME time;
+    utc.wYear = 2026;
+    utc.wMonth = 1;
+    utc.wDay = 15;
+    utc.wHour = 12;
+    if (!SystemTimeToFileTime(&utc, &time)) {
+        report_error(L"Creating fixture reference time", GetLastError());
+        ExitProcess(1);
+    }
+    return ((uint64_t)time.dwHighDateTime << 32) | time.dwLowDateTime;
+}
+
 int port_list_load(PortList *list)
 {
     wchar_t scenario[32] = L"";
@@ -14,6 +29,67 @@ int port_list_load(PortList *list)
         return 1;
     if (wcscmp(scenario, L"output-error") == 0) {
         CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE));
+        return 1;
+    }
+    if (wcscmp(scenario, L"relative-seconds") == 0) {
+        if (!port_set(&port, PORT_NAME, L"COM1"))
+            goto failed;
+        port.has_last_arrival = 1;
+        port.last_arrival = fixture_reference_time() - UINT64_C(590000000);
+        if (!port_list_add(list, &port))
+            goto failed;
+        return 1;
+    }
+    if (wcscmp(scenario, L"arrivals") == 0 ||
+        wcscmp(scenario, L"all-recent") == 0 ||
+        wcscmp(scenario, L"old-arrivals") == 0 ||
+        wcscmp(scenario, L"invalid-arrival") == 0) {
+        static const struct {
+            const wchar_t *name;
+            int64_t age;
+            int known;
+            Transport transport;
+        } cases[] = {
+            { L"COM10", 60, 1, TRANSPORT_USB },
+            { L"COM2", 300, 1, TRANSPORT_USB },
+            { L"COM1", 301, 1, TRANSPORT_NATIVE },
+            { L"COM3", 0, 0, TRANSPORT_UNKNOWN },
+            { L"COM4", -60, 1, TRANSPORT_USB },
+            { L"COM5", 0, 1, TRANSPORT_BLUETOOTH },
+            { L"COM6", 120, 1, TRANSPORT_USB },
+            { L"COM7", 60, 1, TRANSPORT_USB },
+            { L"COM8", 1, 1, TRANSPORT_USB },
+            { L"COM9", 3600, 1, TRANSPORT_NATIVE },
+            { L"COM11", 86400, 1, TRANSPORT_NATIVE },
+            { L"COM12", 172800, 1, TRANSPORT_NATIVE },
+            { L"COM13", 7200, 1, TRANSPORT_NATIVE },
+            { L"COM14", -7200, 1, TRANSPORT_NATIVE },
+            { L"COM15", 184 * 86400, 1, TRANSPORT_NATIVE },
+            { L"COM16", -1, 1, TRANSPORT_NATIVE }
+        };
+        uint64_t now = fixture_reference_time();
+        size_t i;
+        for (i = 0; i < ARRAYSIZE(cases); ++i) {
+            int recent = cases[i].known && cases[i].age >= 0 && cases[i].age <= 300;
+            if ((wcscmp(scenario, L"all-recent") == 0 && !recent) ||
+                (wcscmp(scenario, L"old-arrivals") == 0 && recent))
+                continue;
+            if (!port_set(&port, PORT_NAME, cases[i].name) ||
+                !port_set(&port, PORT_DESCRIPTION, L"Serial"))
+                goto failed;
+            port.transport = cases[i].transport;
+            port.has_last_arrival = cases[i].known;
+            port.last_arrival = cases[i].age < 0 ?
+                now + (uint64_t)(-cases[i].age) * 10000000 :
+                now - (uint64_t)cases[i].age * 10000000;
+            if (wcscmp(cases[i].name, L"COM16") == 0)
+                port.last_arrival = now + 1;
+            if (wcscmp(scenario, L"invalid-arrival") == 0)
+                port.last_arrival = UINT64_MAX;
+            if (!port_list_add(list, &port))
+                goto failed;
+        }
+        port_list_sort(list);
         return 1;
     }
     if (wcscmp(scenario, L"compact-details") == 0) {

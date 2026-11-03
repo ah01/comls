@@ -2,6 +2,7 @@
 #define COMLS_PORTS_H
 
 #include <stddef.h>
+#include <stdint.h>
 #include <wchar.h>
 
 #ifndef COMLS_VERSION
@@ -36,6 +37,8 @@ typedef enum {
 typedef struct {
     wchar_t *text[PORT_FIELD_COUNT];
     Transport transport;
+    uint64_t last_arrival; /* UTC FILETIME ticks: 100 ns since 1601-01-01. */
+    int has_last_arrival;
 } Port;
 
 typedef struct {
@@ -49,7 +52,9 @@ int port_set(Port *port, PortField field, const wchar_t *value);
 void port_clear(Port *port);
 int port_list_add(PortList *list, Port *port);
 void port_list_sort(PortList *list);
+void port_list_sort_by_time(PortList *list);
 void port_list_clear(PortList *list);
+int port_is_recent(const Port *port, uint64_t now);
 void port_observe(Port *port, const wchar_t *instance, unsigned depth);
 const wchar_t *transport_name(Transport transport);
 int usb_identifiers(const wchar_t *instance, unsigned *vid, unsigned *pid);

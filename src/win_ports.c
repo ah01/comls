@@ -112,6 +112,28 @@ static wchar_t *registry_text(Discovery *discovery, HKEY key, const wchar_t *nam
     return text;
 }
 
+static void read_last_arrival(Discovery *discovery, DEVINST device, Port *port)
+{
+    FILETIME time;
+    DEVPROPTYPE type;
+    ULONG bytes = sizeof(time);
+    CONFIGRET status = CM_Get_DevNode_PropertyW(
+        device, &DEVPKEY_Device_LastArrivalDate, &type, (PBYTE)&time, &bytes, 0);
+    if (missing_property(status))
+        return;
+    if (status != CR_SUCCESS) {
+        failure(discovery, L"Reading device last arrival",
+                CM_MapCrToWin32Err(status, ERROR_GEN_FAILURE));
+        return;
+    }
+    if (type != DEVPROP_TYPE_FILETIME || bytes != sizeof(time)) {
+        failure(discovery, L"Invalid device last arrival property", ERROR_INVALID_DATA);
+        return;
+    }
+    port->last_arrival = ((uint64_t)time.dwHighDateTime << 32) | time.dwLowDateTime;
+    port->has_last_arrival = 1;
+}
+
 static int save_port(Discovery *discovery, Port *port)
 {
     if (!port_list_add(discovery->list, port)) {
@@ -156,6 +178,7 @@ static void read_device(Discovery *discovery, HDEVINFO devices,
         port_clear(&port);
         return;
     }
+    read_last_arrival(discovery, node, &port);
     for (i = 0; i < ARRAYSIZE(properties); ++i)
         port.text[properties[i].field] = device_text(discovery, node, properties[i].key);
     if (!port.text[PORT_DESCRIPTION])
