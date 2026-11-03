@@ -51,6 +51,16 @@ verbose USB lookup. Its memory is released after resolving the names; compact
 output, help/version, and scans without USB lookups do not decompress it.
 
 `--help` (`-h`) and `--version` do not enumerate devices.
+`--version` also shows the embedded database's upstream snapshot date:
+
+```text
+comls 0.1.0
+usb.ids 2026-06-26
+```
+
+The date comes from the source snapshot's `# Date:` header, not its Git commit
+or the build time. It is compiled into the executable without decompressing
+the database, so version output works without Git history or external files.
 
 | Exit code | Meaning |
 | --- | --- |
@@ -179,7 +189,7 @@ pwsh -NoProfile -File .\build.ps1 -Test
 
 The update script explicitly downloads https://usb-ids.gowdy.us/usb.ids over HTTPS
 with a timeout and no redirects. It validates vendor/product syntax, UTF-8 names,
-and unique IDs before replacing the old snapshot. A failed download or validation
+and unique IDs, plus a valid upstream date header, before replacing the old snapshot. A failed download or validation
 leaves the old file unchanged. Review and commit the resulting diff; rebuilding
 is required to update the names in an existing executable.
 

@@ -54,9 +54,14 @@ $header = Get-Content -LiteralPath (Join-Path $root 'src\ports.h') -Raw
 $match = [regex]::Match($header, '#define COMLS_VERSION L"([^"]+)"')
 Assert-True $match.Success 'Version definition was not found.'
 $version = $match.Groups[1].Value
+$snapshot = [System.IO.File]::ReadAllText((Join-Path $root 'data\usb.ids'),
+    [System.Text.Encoding]::Latin1)
+$dateMatch = [regex]::Match($snapshot, '(?m)^# Date:\s*(\d{4}-\d{2}-\d{2}) ')
+Assert-True $dateMatch.Success 'Upstream USB snapshot date was not found.'
+$usbDate = $dateMatch.Groups[1].Value
 foreach ($binary in @($exe, $fixture, $noIds, $badIds)) {
     $result = Invoke-Cli $binary @('--version')
-    Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq "comls $version`n" -and
+    Assert-True ($result.ExitCode -eq 0 -and $result.Stdout -ceq "comls $version`nusb.ids $usbDate`n" -and
         $result.Stderr -eq '') 'Version output or exit code is incorrect.'
     foreach ($flag in @('--help', '-h')) {
         $result = Invoke-Cli $binary @($flag)

@@ -1,6 +1,7 @@
 #include "ports.h"
 #include "output.h"
 #include "usb_ids.h"
+#include "usb_ids_metadata.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -232,7 +233,8 @@ int wmain(int argc, wchar_t **argv)
     if (help)
         printed = output_text(stream, help_text);
     else if (version)
-        printed = output_text(stream, L"comls " COMLS_VERSION L"\n");
+        printed = output_text(stream, L"comls " COMLS_VERSION
+                              L"\nusb.ids " COMLS_USB_IDS_DATE L"\n");
     else {
         if (!port_list_load(&list) || (verbose && !add_usb_names(&list))) {
             port_list_clear(&list);

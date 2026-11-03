@@ -27,7 +27,7 @@ New-Item -ItemType Directory -Path $build -Force | Out-Null
 if ($Test) {
     & (Join-Path $PSScriptRoot 'tests\test_usb_ids.ps1')
 }
-$flags = '/nologo /std:c17 /W4 /WX /utf-8 /O1 /GL /Gy /Gw /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /Isrc'
+$flags = '/nologo /std:c17 /W4 /WX /utf-8 /O1 /GL /Gy /Gw /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /D_WIN32_WINNT=0x0A00 /Isrc /Ibuild'
 $link = '/link /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO /DYNAMICBASE /NXCOMPAT'
 $libraries = 'setupapi.lib cfgmgr32.lib advapi32.lib cabinet.lib'
 $commands = @(

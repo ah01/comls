@@ -20,6 +20,7 @@ function Assert-Rejected([scriptblock]$Action, [string]$Message) {
 $unicode = "$([char]0x65e5)$([char]::ConvertFromUtf32(0x1f600))"
 $source = @"
 # Synthetic USB database, intentionally unsorted.
+# Date:    2025-02-28 12:34:56
 ffff  Last vendor
 `tffff  Last product
 5678  Vendor without products
@@ -41,6 +42,7 @@ $inputPath = Join-Path $work 'source.ids'
 $outputPath = Join-Path $build 'test_usb_ids.bin'
 [System.IO.File]::WriteAllText($inputPath, $source, $utf8)
 $vendors = Read-UsbIds $inputPath
+Assert-True ((Get-UsbIdsDate $inputPath) -ceq '2025-02-28') 'Snapshot date changed.'
 Assert-True ($vendors.Count -eq 5) 'Incorrect vendor count.'
 Assert-True ($vendors[0x0403].Products.Count -eq 2) 'Ignored sections became products.'
 Assert-True ($vendors[0x0403].Name -ceq "Example USB vendor $unicode") 'UTF-8 name changed.'
@@ -60,6 +62,19 @@ Assert-True ((Get-FileHash $outputPath).Hash -eq (Get-FileHash $second).Hash) `
 Write-UsbIdsBinary (Read-UsbIds $inputPath) $second
 Assert-True ((Get-FileHash $outputPath).Hash -eq (Get-FileHash $second).Hash) `
     'UTF-8 BOM or CRLF changed the binary.'
+Assert-True ((Get-UsbIdsDate $inputPath) -ceq '2025-02-28') `
+    'UTF-8 BOM or CRLF changed the snapshot date.'
+
+$convert = Join-Path $PSScriptRoot '..\scripts\convert-usb-ids.ps1'
+$metadata = Join-Path $work 'metadata.h'
+& $convert -InputPath $inputPath -OutputPath $second -MetadataPath $metadata
+Assert-True ([System.IO.File]::ReadAllText($metadata) -ceq
+    "#define COMLS_USB_IDS_DATE L`"2025-02-28`"`n") 'Generated snapshot metadata is incorrect.'
+[System.IO.File]::WriteAllText($inputPath,
+    ($source.Replace('2025-02-28', '2026-03-01')), $utf8)
+& $convert -InputPath $inputPath -OutputPath $second -MetadataPath $metadata
+Assert-True ([System.IO.File]::ReadAllText($metadata) -ceq
+    "#define COMLS_USB_IDS_DATE L`"2026-03-01`"`n") 'Updated snapshot metadata was not regenerated.'
 
 $compress = Join-Path $PSScriptRoot '..\scripts\compress-usb-ids.ps1'
 $packed = Join-Path $build 'test_usb_ids.mszip'
@@ -76,6 +91,12 @@ Assert-Rejected { $null = [Comls.MsZip]::Encode([byte[]]@()) } `
     'Empty compression input was accepted.'
 
 $invalidPath = Join-Path $work 'invalid.ids'
+foreach ($badHeader in @('', '# Date: 2025-02-29 12:34:56',
+    '# Date: 2025-01-01', '# Date: invalid',
+    "# Date: 2025-01-01 00:00:00`n# Date: 2025-01-02 00:00:00")) {
+    [System.IO.File]::WriteAllText($invalidPath, $badHeader, $utf8)
+    Assert-Rejected { $null = Get-UsbIdsDate $invalidPath } 'Invalid snapshot date was accepted.'
+}
 foreach ($invalid in @(
     '',
     'An HTML download error',
@@ -117,11 +138,15 @@ function Invoke-WebRequest {
         [System.IO.File]::WriteAllText($OutFile, 'partial download', $utf8)
         throw 'Synthetic network error.'
     }
-    $content = if ($script:downloadMode -eq 'valid') { $source + "`n# Updated" } else { 'invalid download' }
+    $content = switch ($script:downloadMode) {
+        'valid' { $source + "`n# Updated" }
+        'missing-date' { $source.Replace('# Date:', '# Removed:') }
+        default { 'invalid download' }
+    }
     [System.IO.File]::WriteAllText($OutFile, $content, $utf8)
 }
 try {
-    foreach ($mode in @('invalid', 'network-error')) {
+    foreach ($mode in @('invalid', 'network-error', 'missing-date')) {
         $script:downloadMode = $mode
         Assert-Rejected { Update-UsbIds $destination } 'Failed update was accepted.'
         Assert-True ((Get-FileHash $destination).Hash -eq $originalHash) 'Failed update changed the snapshot.'

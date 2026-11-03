@@ -1,6 +1,21 @@
 #requires -Version 7.0
 Set-StrictMode -Version Latest
 
+function Get-UsbIdsDate([string]$Path) {
+    $text = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::Latin1)
+    $dates = [regex]::Matches($text, '(?m)^# Date:[ \t]*([^\r\n]*)')
+    if ($dates.Count -ne 1) {
+        throw 'usb.ids must contain exactly one upstream Date header.'
+    }
+    $date = [datetime]::MinValue
+    if (-not [datetime]::TryParseExact($dates[0].Groups[1].Value.Trim(),
+        'yyyy-MM-dd HH:mm:ss', [System.Globalization.CultureInfo]::InvariantCulture,
+        [System.Globalization.DateTimeStyles]::None, [ref]$date)) {
+        throw 'usb.ids has an invalid upstream Date header.'
+    }
+    return $date.ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture)
+}
+
 function Read-UsbIds([string]$Path) {
     $utf8 = [System.Text.UTF8Encoding]::new($false, $true)
     $vendors = [System.Collections.Generic.SortedDictionary[int, object]]::new()
@@ -113,6 +128,7 @@ function Update-UsbIds([string]$Path) {
         Invoke-WebRequest -Uri 'https://usb-ids.gowdy.us/usb.ids' `
             -OutFile $temporary -TimeoutSec 60 -MaximumRedirection 0
         $null = Read-UsbIds $temporary
+        $null = Get-UsbIdsDate $temporary
         [System.IO.File]::Move($temporary, $Path, $true)
     } finally {
         if (Test-Path -LiteralPath $temporary) {
