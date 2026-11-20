@@ -22,7 +22,7 @@ pwsh -NoProfile -File .\build.ps1 -Test
 ```
 
 The executable is `build\comls.exe`. Run the test command after C or build changes;
-keep `/W4 /WX` clean. See [README.md](README.md) for usage and discovery limitations.
+keep `/W4 /WX` clean. See [the reference](doc/reference.md) for usage and discovery limitations.
 
 ## Invariants
 

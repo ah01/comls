@@ -18,7 +18,7 @@ tests create disposable repositories under `build\` and mock GitHub publication;
 they do not publish tags or releases. Keep the default source version in
 `COMLS_VERSION` in `src\ports.h`. CI derives X/Y from that definition and injects
 the calculated mainline patch version at build time without committing generated
-files. See [Releases and versioning](README.md#releases-and-versioning) for baseline
+files. See [Releases and versioning](doc/reference.md#releases-and-versioning) for baseline
 tags, versioned local builds, and manually promoting an Alpha to stable.
 
 For bug reports, include the Windows version, `comls --version`, the command used,
