@@ -37,15 +37,10 @@ not code-signed, so Windows SmartScreen may warn about an unfamiliar executable.
 
 ```powershell
 .\build\comls.exe
-.\build\comls.exe --verbose
-.\build\comls.exe -d
 .\build\comls.exe -vv
 .\build\comls.exe --usb-only
-.\build\comls.exe -u -v
 .\build\comls.exe --sort-by-time
-.\build\comls.exe -t -u -v
 .\build\comls.exe --version
-.\build\comls.exe --help
 ```
 
 `--usb-only` (`-u`) lists only ports classified as `USB` and can be combined with
@@ -189,12 +184,6 @@ and its full commit SHA identifies the downloaded revision. Neither date is the
 download or build time. This metadata is compiled into the executable without
 decompressing the database, so version output works without Git history or external files.
 
-| Exit code | Meaning |
-| --- | --- |
-| `0` | Success, including no ports found |
-| `1` | Discovery or output error; details go to stderr |
-| `2` | Invalid arguments |
-
 Console output uses Unicode. Redirected output is UTF-8 without a BOM:
 
 ```powershell
@@ -219,12 +208,6 @@ pwsh -NoProfile -File .\build.ps1
 pwsh -NoProfile -File .\build.ps1 -Test
 ```
 
-The script locates MSVC using `vswhere` and initializes its x64 environment.
-It loads the committed `data\usb.ids` and `data\raspberrypi-usb-pid.json`, merges
-missing Raspberry Pi products in memory, converts the result into an indexed binary,
-compresses it with MSZIP using the Windows Compression API, and uses the Windows SDK resource
-compiler (`rc.exe`) to embed it in the executable. The compression script uses
-PowerShell's built-in `Add-Type`; no extra tools or packages are needed.
 Normal builds do not download data and work offline.
 It works from a regular terminal; a Developer Command Prompt is not required.
 `build\comls.exe` is the standalone Release executable. Copy that file to a directory

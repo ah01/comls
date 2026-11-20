@@ -3,6 +3,8 @@
 **Find the COM port you just plugged in.** A small, read-only CLI for
 Windows 10/11 x64, written in C with no external runtime dependencies.
 
+## Features
+
 - See COM ports at a glance, with USB, Bluetooth, native, and virtual connection types.
 - Spot recent arrivals, sort newest first, or show only USB ports.
 - Get USB vendor and product names from an embedded, offline database.
@@ -66,5 +68,5 @@ See the [reference](doc/reference.md) for
 [release versioning](doc/reference.md#releases-and-versioning), and
 [USB database updates](doc/reference.md#updating-the-usb-database).
 
-[Contributing](CONTRIBUTING.md) | [Security](SECURITY.md) | [MIT license](LICENSE).
+[Contributing](CONTRIBUTING.md) | [Security](SECURITY.md).
 Bundled USB data uses BSD-3-Clause; see [attribution and notices](doc/reference.md#license).
