@@ -34,6 +34,7 @@ $versionHeader = if ($Version) { "#define COMLS_VERSION L`"$Version`"`n" } else 
 if ($Test) {
     & (Join-Path $PSScriptRoot 'tests\test_release_version.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_release.ps1')
+    & (Join-Path $PSScriptRoot 'tests\test_scoop.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_raspberrypi_usb_pid.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_usb_ids.ps1')
 }

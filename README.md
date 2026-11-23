@@ -30,6 +30,22 @@ plain C and keep it small and fast?
 
 ## Get it
 
+### Scoop
+
+With [Scoop](https://scoop.sh/) and Git installed, run:
+
+```powershell
+scoop bucket add comls https://github.com/ah01/comls
+scoop install comls/comls
+comls --help
+```
+
+The bucket currently installs the pinned **0.1.11 Alpha** release, not necessarily
+the latest snapshot. When the manifest is updated, run `scoop update` followed by
+`scoop update comls`. Scoop verifies the executable and combined license hashes.
+
+### Direct download
+
 Download **`comls.exe`** and the combined **`LICENSE`** file from
 [GitHub Releases](https://github.com/ah01/comls/releases).
 No installer, administrator rights, or Visual C++ Redistributable needed.
