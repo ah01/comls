@@ -113,6 +113,14 @@ try {
         'Publication must produce a prerelease.'
     Assert-True ($script:mockTag -ceq $sha) 'Tag must identify the tested commit.'
     Assert-ReleaseAssets $script:remoteAssets
+    $combinedLicense = [System.IO.File]::ReadAllText((Join-Path $script:remoteAssets 'LICENSE'))
+    Assert-True ($combinedLicense.Contains('Application license') -and
+        $combinedLicense.Contains('USB license') -and
+        $combinedLicense.Contains('Raspberry Pi license')) `
+        'Release LICENSE must include all application and bundled-data licenses.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $script:remoteAssets 'usb.ids.LICENSE')) -and
+        -not (Test-Path -LiteralPath (Join-Path $script:remoteAssets 'raspberrypi-usb-pid.LICENSE'))) `
+        'Bundled-data licenses must not be separate release assets.'
     $count = $script:calls.Count
     Publish-AlphaRelease 'test/repo' $work $sha $executable '0.1.1'
     Assert-True (@($script:calls | Select-Object -Skip $count | Where-Object {
