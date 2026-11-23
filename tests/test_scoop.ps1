@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$manifest = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot '..\bucket\comls.json') |
+$manifest = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot '..\comls.json') |
     ConvertFrom-Json
 if ($manifest.version -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
     throw 'Scoop manifest must specify a release version.'

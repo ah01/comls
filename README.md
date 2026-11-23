@@ -32,18 +32,17 @@ plain C and keep it small and fast?
 
 ### Scoop
 
-With [Scoop](https://scoop.sh/) and Git installed, run:
+With [Scoop](https://scoop.sh/) installed, run:
 
 ```powershell
-scoop bucket add comls https://github.com/ah01/comls
-scoop install comls/comls
+scoop install https://raw.githubusercontent.com/ah01/comls/main/comls.json
 comls --help
 ```
 
-The bucket currently installs a pinned **Alpha** release, not necessarily the
-latest snapshot; see `scoop info comls/comls` for its version. When the manifest is
-updated, run `scoop update` followed by `scoop update comls`. Scoop verifies the
-executable and combined license hashes.
+The manifest currently installs a pinned **Alpha** release, not necessarily the
+latest snapshot; see `scoop info comls` for its version. When the manifest is
+updated, run `scoop update comls`. Scoop verifies the executable and combined
+license hashes.
 
 ### Direct download
 

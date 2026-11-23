@@ -323,8 +323,8 @@ also requires investigation; the publisher does not silently rebuild it.
 All releases are retained. The release scripts use PowerShell and GitHub CLI;
 there is no separate release framework, installer, or runtime dependency.
 
-The Scoop bucket is updated manually, independently of release publication. To
-update `bucket/comls.json`, select a published release and change its version,
+The Scoop manifest is updated manually, independently of release publication. To
+update `comls.json`, select a published release and change its version,
 both asset URLs, and both SHA-256 hashes using that release's `SHA256SUMS.txt`.
 Update the README if the selected release is no longer an Alpha.
 
