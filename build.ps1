@@ -32,6 +32,10 @@ $versionHeader = if ($Version) { "#define COMLS_VERSION L`"$Version`"`n" } else 
 & (Join-Path $PSScriptRoot 'scripts\compress-usb-ids.ps1') `
     -InputPath (Join-Path $build 'usb_ids.bin') -OutputPath (Join-Path $build 'usb_ids.mszip')
 if ($Test) {
+    & powershell.exe -NoProfile -File (Join-Path $PSScriptRoot 'tests\test_install.ps1')
+    if ($LASTEXITCODE -ne 0) {
+        throw "Installer tests failed (exit code $LASTEXITCODE)."
+    }
     & (Join-Path $PSScriptRoot 'tests\test_release_version.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_release.ps1')
     & (Join-Path $PSScriptRoot 'tests\test_raspberrypi_usb_pid.ps1')

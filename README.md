@@ -30,6 +30,24 @@ plain C and keep it small and fast?
 
 ## Get it
 
+Install from Windows PowerShell 5.1 or later (no administrator rights or extra tools):
+
+```powershell
+irm https://raw.githubusercontent.com/ah01/comls/main/install.ps1 | iex
+comls --help
+```
+
+Review [install.ps1](install.ps1) before running it. It downloads the newest
+published GitHub release (including Alpha prereleases), verifies its SHA-256
+checksums, and copies `comls.exe` and its combined `LICENSE` into
+`%LOCALAPPDATA%\Programs\comls`. It adds that directory to your user `PATH`
+and the current PowerShell session. For other terminals, sign out and back in
+if restarting them does not refresh `PATH`.
+Run the same command again to update. To uninstall, delete that directory and
+remove its entry from your user `PATH` in Windows Environment Variables.
+
+Alternatively, download manually:
+
 Download **`comls.exe`** and the combined **`LICENSE`** file from
 [GitHub Releases](https://github.com/ah01/comls/releases).
 No installer, administrator rights, or Visual C++ Redistributable needed.
