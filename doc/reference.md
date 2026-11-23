@@ -14,7 +14,7 @@ see the [README](../README.md). Run all build commands from the repository root.
 
 ## Download
 
-Download `comls.exe` and the license notices from
+Download `comls.exe` and the combined `LICENSE` file from
 [GitHub Releases](https://github.com/ah01/comls/releases). The executable is
 standalone; no installer or Visual C++ Redistributable is required.
 **Alpha** releases are automatic snapshots, marked as GitHub prereleases.
@@ -22,8 +22,8 @@ Stable releases are explicitly promoted from an existing Alpha without rebuildin
 the executable and checksums remain identical. Until a stable release is promoted,
 only prereleases are available.
 
-Each release includes `LICENSE`, `usb.ids.LICENSE`, `raspberrypi-usb-pid.LICENSE`,
-and `SHA256SUMS.txt`. To check the executable after downloading:
+Each release includes `LICENSE`, which combines the application and bundled-data
+license notices, and `SHA256SUMS.txt`. To check the executable after downloading:
 
 ```powershell
 Get-FileHash .\comls.exe -Algorithm SHA256
@@ -424,9 +424,8 @@ comls code is [MIT](../LICENSE). The USB ID Repository database is distributed u
 its BSD-3-Clause option; see [the database attribution and license](../data/usb.ids.LICENSE)
 and [upstream licensing](https://usb-ids.gowdy.us/). The snapshot's original header
 is retained, and the attribution/license notice is embedded as a separate RCDATA
-resource in the executable. Include `data\usb.ids.LICENSE` with any binary release
-as its third-party notice. The Raspberry Pi assignments use BSD-3-Clause;
+resource in the executable. The Raspberry Pi assignments use BSD-3-Clause;
 see [their attribution and license](../data/raspberrypi-usb-pid.LICENSE), also embedded
-as a separate RCDATA resource. Include `data\raspberrypi-usb-pid.LICENSE` alongside
-the usb.ids notice with any binary release. The application needs only the
-executable to run.
+as a separate RCDATA resource. Include both third-party notices when distributing
+the executable; GitHub releases combine them with the application license in `LICENSE`.
+The application needs only the executable to run.

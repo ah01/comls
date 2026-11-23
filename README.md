@@ -30,7 +30,7 @@ plain C and keep it small and fast?
 
 ## Get it
 
-Download **`comls.exe`** and the license notices from
+Download **`comls.exe`** and the combined **`LICENSE`** file from
 [GitHub Releases](https://github.com/ah01/comls/releases).
 No installer, administrator rights, or Visual C++ Redistributable needed.
 Automatic snapshots are marked **Alpha** (prereleases). Builds are unsigned,

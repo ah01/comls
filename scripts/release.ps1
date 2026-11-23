@@ -14,7 +14,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'release-version.ps1')
-$releaseAssetNames = @('comls.exe', 'LICENSE', 'usb.ids.LICENSE',
+$releaseAssetNames = @('comls.exe', 'LICENSE', 'SHA256SUMS.txt')
+$legacyReleaseAssetNames = @('comls.exe', 'LICENSE', 'usb.ids.LICENSE',
     'raspberrypi-usb-pid.LICENSE', 'SHA256SUMS.txt')
 
 function Invoke-ReleaseGh {
@@ -48,8 +49,12 @@ function Get-ReleaseTagCommit {
 function Assert-ReleaseAssets {
     param([string]$Directory)
     $names = @(Get-ChildItem -LiteralPath $Directory -File | Select-Object -ExpandProperty Name)
-    if (@(Compare-Object $releaseAssetNames $names).Count -ne 0) {
-        throw 'Release must contain exactly the executable, three licenses, and SHA256SUMS.txt.'
+    if (@(Compare-Object $releaseAssetNames $names).Count -eq 0) {
+        $expectedNames = $releaseAssetNames
+    } elseif (@(Compare-Object $legacyReleaseAssetNames $names).Count -eq 0) {
+        $expectedNames = $legacyReleaseAssetNames
+    } else {
+        throw 'Release must contain exactly the executable, combined license, and SHA256SUMS.txt.'
     }
     $lines = @(Get-Content -LiteralPath (Join-Path $Directory 'SHA256SUMS.txt'))
     $seen = @()
@@ -63,17 +68,23 @@ function Assert-ReleaseAssets {
         if ($hash -ine $match.Groups[1].Value) { throw "Checksum mismatch for $name." }
         $seen += $name
     }
-    if ($seen.Count -ne 4) { throw 'Checksum manifest is incomplete.' }
+    if ($seen.Count -ne $expectedNames.Count - 1) { throw 'Checksum manifest is incomplete.' }
 }
 
 function New-ReleaseAssets {
     param([string]$RepositoryPath, [string]$ExecutablePath, [string]$Directory)
     New-Item -ItemType Directory -Path $Directory | Out-Null
     Copy-Item -LiteralPath $ExecutablePath -Destination (Join-Path $Directory 'comls.exe')
-    foreach ($name in @('LICENSE', 'usb.ids.LICENSE', 'raspberrypi-usb-pid.LICENSE')) {
-        $relative = if ($name -eq 'LICENSE') { $name } else { "data\$name" }
-        Copy-Item -LiteralPath (Join-Path $RepositoryPath $relative) -Destination (Join-Path $Directory $name)
+    $licensePaths = @(
+        (Join-Path $RepositoryPath 'LICENSE'),
+        (Join-Path $RepositoryPath 'data\usb.ids.LICENSE'),
+        (Join-Path $RepositoryPath 'data\raspberrypi-usb-pid.LICENSE')
+    )
+    $licenseTexts = foreach ($path in $licensePaths) {
+        [System.IO.File]::ReadAllText($path)
     }
+    [System.IO.File]::WriteAllText((Join-Path $Directory 'LICENSE'), ($licenseTexts -join "`n`n"),
+        [System.Text.UTF8Encoding]::new($false))
     $lines = foreach ($name in $releaseAssetNames | Where-Object { $_ -ne 'SHA256SUMS.txt' }) {
         $hash = (Get-FileHash -LiteralPath (Join-Path $Directory $name) -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $name"
@@ -125,7 +136,7 @@ Alpha build of comls $($version.Version) for Windows 10/11 x64. Not a stable rel
 
 Source commit: $($version.Commit)
 Version: source X.Y plus the first-parent main commit count, excluding vX.Y.0 when present.
-Download comls.exe and the license notices. SHA256SUMS.txt contains SHA-256 checksums.
+Download comls.exe and the combined LICENSE file. SHA256SUMS.txt contains SHA-256 checksums.
 "@
             Invoke-ReleaseGh @('release', 'create', $tag, '--repo', $Repository, '--verify-tag',
                 '--draft', '--prerelease', '--title', "comls $($version.Version) Alpha", '--notes', $notes) |
@@ -211,7 +222,7 @@ Stable release of comls $($version.Version) for Windows 10/11 x64.
 
 Source commit: $sha
 Promoted from the tested Alpha prerelease without rebuilding or replacing assets.
-Download comls.exe and the license notices. SHA256SUMS.txt contains SHA-256 checksums.
+Download comls.exe and the combined LICENSE file. SHA256SUMS.txt contains SHA-256 checksums.
 "@
         Invoke-ReleaseGh @('release', 'edit', $Tag, '--repo', $Repository, '--prerelease=false',
             '--latest', '--title', "comls $($version.Version)", '--notes', $notes) | Out-Null
