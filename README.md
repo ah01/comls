@@ -40,9 +40,10 @@ scoop install comls/comls
 comls --help
 ```
 
-The bucket currently installs the pinned **0.1.11 Alpha** release, not necessarily
-the latest snapshot. When the manifest is updated, run `scoop update` followed by
-`scoop update comls`. Scoop verifies the executable and combined license hashes.
+The bucket currently installs a pinned **Alpha** release, not necessarily the
+latest snapshot; see `scoop info comls/comls` for its version. When the manifest is
+updated, run `scoop update` followed by `scoop update comls`. Scoop verifies the
+executable and combined license hashes.
 
 ### Direct download
 
