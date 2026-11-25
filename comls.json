@@ -1,0 +1,19 @@
+{
+    "version": "0.1.11",
+    "description": "Find COM ports on Windows.",
+    "homepage": "https://github.com/ah01/comls",
+    "license": "MIT, BSD-3-Clause",
+    "architecture": {
+        "64bit": {
+            "url": [
+                "https://github.com/ah01/comls/releases/download/v0.1.11/comls.exe",
+                "https://github.com/ah01/comls/releases/download/v0.1.11/LICENSE"
+            ],
+            "hash": [
+                "85992b84977f0e4512fae5d0b216460517fa1bb917bb5a0f87a324c5ff24de69",
+                "a4b4e094591d8164d260129d4a9c75df53992b862faa047dc8539c1ced6243b9"
+            ]
+        }
+    },
+    "bin": "comls.exe"
+}
